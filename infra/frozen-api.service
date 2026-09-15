@@ -1,0 +1,19 @@
+[Unit]
+Description=Frozen Paletas API (NestJS)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/frozen-paletas/backend
+Environment=NODE_ENV=production
+ExecStart=/root/.nvm/versions/node/v22.23.1/bin/node dist/main.js
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=frozen-api
+
+[Install]
+WantedBy=multi-user.target
