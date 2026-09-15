@@ -62,6 +62,24 @@ flowchart LR
 
 Un solo backend y una sola base de datos. La APK es el cliente principal, el que se usa en el día a día. El panel web existe para lo que no se resuelve de pie: reportes con filtros de fechas, comparativas por periodo y mantenimiento del catálogo.
 
+El backend es un **monolito modular**: un solo despliegue dividido en módulos por dominio, cada uno con su controlador, su servicio y sus DTO. Los módulos se hablan por los servicios que exportan, nunca por la base de datos del otro.
+
+| Módulo | Responsabilidad |
+|---|---|
+| `auth` | Inicio de sesión, renovación del token y perfil |
+| `permisos` | Catálogo de permisos y su reparto por rol, editable en caliente |
+| `usuarios` | Alta, edición y baja de los usuarios operativos |
+| `sabores` | Catálogo de sabores, su categoría, su estado y su stock mínimo |
+| `inventario` | Núcleo del stock: libro de movimientos, descuento PEPS y consultas |
+| `lotes` | Generación del código de lote y consulta de su trazabilidad |
+| `produccion` | Registro en dos tiempos: producción y conteo del embolsado |
+| `destinos` | Puntos de venta, clientes mayoristas, ferias y clientes de delivery |
+| `salidas` | Salidas por canal con su detalle por lote |
+| `mermas` | Pérdidas y el catálogo de causas |
+| `panel` | Resumen del estado de Frozen en una sola consulta |
+
+`inventario` es el único módulo que escribe en el libro de movimientos: producción, salidas y mermas le piden el movimiento en lugar de tocar el stock por su cuenta. Así la regla de PEPS y la prohibición de stock negativo viven en un solo sitio.
+
 El criterio de reparto es el mismo que en Grupo Valderrama: entra a la app lo que se hace en dos toques —registrar una producción, descontar una salida, anotar una merma, contar el físico—; lo que exige leer una tabla ancha se queda en la web.
 
 ## Roles y permisos
@@ -336,13 +354,16 @@ Lo genera el backend dentro de la misma transacción que crea la producción, to
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Abierto: la producción ingresa al stock
+    [*] --> Pendiente: se registra la producción y nace el código
+    Pendiente --> Abierto: el embolsado ingresa las paletas al stock
     Abierto --> Parcial: se descuenta una parte
     Parcial --> Parcial: más salidas o mermas
     Parcial --> Agotado: stock restante en cero
     Abierto --> Agotado: sale completo
     Agotado --> [*]
 ```
+
+El código existe desde que se registra la producción, para poder rotular las bolsas, pero el lote no tiene stock hasta el conteo del embolsado.
 
 Un lote agotado no desaparece: sigue consultable para reconstruir a dónde fue a parar cada paleta.
 
@@ -690,8 +711,9 @@ No hace falta desarrollar todos los módulos completos desde el primer día.
 
 | Ruta | Contenido |
 |---|---|
-| `backend/` | API NestJS con Prisma y PostgreSQL |
-| `backend/prisma/` | Esquema y migraciones |
+| `backend/` | API NestJS con Prisma y PostgreSQL, un módulo por dominio |
+| `backend/prisma/` | Esquema, migraciones y datos iniciales |
+| `backend/src/generated/prisma/` | Cliente de Prisma generado, no se commitea |
 | `frontend/` | Panel web en Angular |
 | `movil/` | App Flutter |
 | `infra/` | Compilación del APK en Docker y despliegue |
