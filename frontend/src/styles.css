@@ -1,0 +1,101 @@
+@import 'tailwindcss';
+
+@import '@fontsource-variable/bricolage-grotesque/wght.css';
+@import '@fontsource-variable/instrument-sans/wght.css';
+
+@theme {
+  --color-fondo: #ebf2f1;
+  --color-superficie: #ffffff;
+  --color-hundido: #e1ebe9;
+  --color-linea: #cfdfdc;
+  --color-tinta: #0d2f36;
+  --color-tenue: #587880;
+  --color-helado: #0e8f8f;
+  --color-helado-hondo: #0a6e6e;
+  --color-hoja: #2e7d57;
+  --color-aguaje: #c4661a;
+  --color-granate: #a2322b;
+
+  --font-display: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Instrument Sans Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --radius-campo: 0.75rem;
+  --radius-lamina: 1.5rem;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-fondo);
+    color: var(--color-tinta);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-helado);
+    outline-offset: 2px;
+  }
+
+  table {
+    border-collapse: collapse;
+  }
+}
+
+@layer components {
+  .titulo {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.022em;
+    line-height: 1.1;
+  }
+
+  .cifra {
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
+
+  .rotulo {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-tenue);
+  }
+
+  .lamina {
+    background-color: var(--color-superficie);
+    border: 1px solid var(--color-linea);
+    border-radius: var(--radius-lamina);
+  }
+
+  .celda {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--color-linea);
+    vertical-align: middle;
+  }
+
+  .encabezado-tabla {
+    padding: 0.5rem 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-tenue);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
