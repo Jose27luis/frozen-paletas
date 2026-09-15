@@ -1,0 +1,386 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Rol {
+  ADMIN
+  OPERACIONES
+  PRODUCCION
+  CONSULTA
+}
+
+enum CategoriaSabor {
+  CON_RELLENO
+  AMAZONICO
+  FRUTAL
+  CREMOSO
+  BEBIDA
+}
+
+enum EstadoSabor {
+  ACTIVO
+  PROXIMO
+  INACTIVO
+}
+
+enum EstadoProduccion {
+  REGISTRADA
+  EMBOLSADA
+  ANULADA
+}
+
+enum EstadoLote {
+  PENDIENTE
+  ABIERTO
+  PARCIAL
+  AGOTADO
+}
+
+enum TipoMovimiento {
+  INGRESO_PRODUCCION
+  SALIDA
+  MERMA
+  AJUSTE
+}
+
+enum TipoSalida {
+  PDV
+  MAYORISTA
+  DELIVERY
+  FERIA
+  OTRA
+}
+
+enum OrigenMerma {
+  PRODUCCION
+  EMBOLSADO
+  STOCK
+}
+
+enum EstadoConteo {
+  ABIERTO
+  CERRADO
+}
+
+model Usuario {
+  id            String   @id @default(uuid())
+  nombres       String
+  apellidos     String
+  correo        String   @unique
+  passwordHash  String   @map("password_hash")
+  rol           Rol
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  producciones        Produccion[]
+  movimientos         Movimiento[]
+  salidas             Salida[]
+  mermas              Merma[]
+  conteosRealizados   Conteo[]     @relation("ConteosRealizados")
+  conteosAutorizados  Conteo[]     @relation("ConteosAutorizados")
+  ajustesAutorizados  Ajuste[]     @relation("AjustesAutorizados")
+  registrosAuditados  Auditoria[]
+
+  @@index([rol])
+  @@map("usuario")
+}
+
+model Permiso {
+  id          String  @id @default(uuid())
+  clave       String  @unique
+  nombre      String
+  descripcion String?
+
+  roles RolPermiso[]
+
+  @@map("permiso")
+}
+
+model RolPermiso {
+  id        String   @id @default(uuid())
+  rol       Rol
+  permisoId String   @map("permiso_id")
+  creadoEn  DateTime @default(now()) @map("creado_en")
+
+  permiso Permiso @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  @@unique([rol, permisoId])
+  @@index([rol])
+  @@map("rol_permiso")
+}
+
+model Sabor {
+  id            String         @id @default(uuid())
+  nombre        String         @unique
+  abreviatura   String         @unique @db.Char(3)
+  categoria     CategoriaSabor
+  estado        EstadoSabor    @default(ACTIVO)
+  stockMinimo   Int            @default(80) @map("stock_minimo")
+  creadoEn      DateTime       @default(now()) @map("creado_en")
+  actualizadoEn DateTime       @updatedAt @map("actualizado_en")
+
+  lotes           Lote[]
+  producciones    Produccion[]
+  movimientos     Movimiento[]
+  salidaDetalles  SalidaDetalle[]
+  mermas          Merma[]
+  conteoDetalles  ConteoDetalle[]
+  ajustes         Ajuste[]
+
+  @@index([estado])
+  @@map("sabor")
+}
+
+model Produccion {
+  id                String           @id @default(uuid())
+  fecha             DateTime         @db.Date
+  saborId           String           @map("sabor_id")
+  cantidadObtenida  Int              @map("cantidad_obtenida")
+  cantidadEmbolsada Int?             @map("cantidad_embolsada")
+  estado            EstadoProduccion @default(REGISTRADA)
+  responsableId     String           @map("responsable_id")
+  claveIdempotencia String           @map("clave_idempotencia")
+  motivoAnulacion   String?          @map("motivo_anulacion")
+  embolsadoEn       DateTime?        @map("embolsado_en")
+  creadoEn          DateTime         @default(now()) @map("creado_en")
+
+  sabor       Sabor   @relation(fields: [saborId], references: [id], onDelete: Restrict)
+  responsable Usuario @relation(fields: [responsableId], references: [id], onDelete: Restrict)
+  lote        Lote?
+  mermas      Merma[]
+
+  @@unique([responsableId, claveIdempotencia])
+  @@index([saborId, fecha])
+  @@index([estado])
+  @@map("produccion")
+}
+
+model Lote {
+  id                String     @id @default(uuid())
+  codigo            String     @unique
+  saborId           String     @map("sabor_id")
+  produccionId      String     @unique @map("produccion_id")
+  fechaProduccion   DateTime   @map("fecha_produccion") @db.Date
+  correlativo       Int
+  cantidadIngresada Int        @default(0) @map("cantidad_ingresada")
+  stockRestante     Int        @default(0) @map("stock_restante")
+  estado            EstadoLote @default(PENDIENTE)
+  creadoEn          DateTime   @default(now()) @map("creado_en")
+
+  sabor      Sabor           @relation(fields: [saborId], references: [id], onDelete: Restrict)
+  produccion Produccion      @relation(fields: [produccionId], references: [id], onDelete: Restrict)
+  movimientos Movimiento[]
+  detalles   SalidaDetalle[]
+  mermas     Merma[]
+  ajustes    Ajuste[]
+
+  @@unique([saborId, fechaProduccion, correlativo])
+  @@index([saborId, estado])
+  @@index([fechaProduccion])
+  @@map("lote")
+}
+
+model Movimiento {
+  id                String         @id @default(uuid())
+  tipo              TipoMovimiento
+  fecha             DateTime       @db.Date
+  saborId           String         @map("sabor_id")
+  loteId            String?        @map("lote_id")
+  cantidad          Int
+  usuarioId         String         @map("usuario_id")
+  referenciaTipo    String?        @map("referencia_tipo")
+  referenciaId      String?        @map("referencia_id")
+  motivo            String?
+  creadoEn          DateTime       @default(now()) @map("creado_en")
+
+  sabor   Sabor       @relation(fields: [saborId], references: [id], onDelete: Restrict)
+  lote    Lote?       @relation(fields: [loteId], references: [id], onDelete: Restrict)
+  usuario Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  ajuste  Ajuste?
+  rastros Auditoria[]
+
+  @@index([saborId, fecha])
+  @@index([loteId])
+  @@index([tipo, fecha])
+  @@index([referenciaTipo, referenciaId])
+  @@map("movimiento")
+}
+
+model Destino {
+  id        String     @id @default(uuid())
+  tipo      TipoSalida
+  nombre    String
+  direccion String?
+  telefono  String?
+  activo    Boolean    @default(true)
+  creadoEn  DateTime   @default(now()) @map("creado_en")
+
+  salidas Salida[]
+
+  @@unique([tipo, nombre])
+  @@index([tipo, activo])
+  @@map("destino")
+}
+
+model Salida {
+  id                String     @id @default(uuid())
+  fecha             DateTime   @db.Date
+  tipo              TipoSalida
+  destinoId         String?    @map("destino_id")
+  motivo            String?
+  usuarioId         String     @map("usuario_id")
+  claveIdempotencia String     @map("clave_idempotencia")
+  creadoEn          DateTime   @default(now()) @map("creado_en")
+
+  destino  Destino?        @relation(fields: [destinoId], references: [id], onDelete: Restrict)
+  usuario  Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  detalles SalidaDetalle[]
+
+  @@unique([usuarioId, claveIdempotencia])
+  @@index([tipo, fecha])
+  @@index([destinoId])
+  @@map("salida")
+}
+
+model SalidaDetalle {
+  id             String   @id @default(uuid())
+  salidaId       String   @map("salida_id")
+  saborId        String   @map("sabor_id")
+  loteId         String   @map("lote_id")
+  cantidad       Int
+  precioUnitario Decimal? @map("precio_unitario") @db.Decimal(10, 2)
+  loteManual     Boolean  @default(false) @map("lote_manual")
+
+  salida Salida @relation(fields: [salidaId], references: [id], onDelete: Cascade)
+  sabor  Sabor  @relation(fields: [saborId], references: [id], onDelete: Restrict)
+  lote   Lote   @relation(fields: [loteId], references: [id], onDelete: Restrict)
+
+  @@index([salidaId])
+  @@index([saborId])
+  @@index([loteId])
+  @@map("salida_detalle")
+}
+
+model CausaMerma {
+  id                  String   @id @default(uuid())
+  nombre              String   @unique
+  requiereDescripcion Boolean  @default(false) @map("requiere_descripcion")
+  activa              Boolean  @default(true)
+  creadoEn            DateTime @default(now()) @map("creado_en")
+
+  mermas Merma[]
+
+  @@map("causa_merma")
+}
+
+model Merma {
+  id                String      @id @default(uuid())
+  fecha             DateTime    @db.Date
+  saborId           String      @map("sabor_id")
+  loteId            String?     @map("lote_id")
+  produccionId      String?     @map("produccion_id")
+  cantidad          Int
+  causaId           String      @map("causa_id")
+  origen            OrigenMerma
+  observacion       String?
+  usuarioId         String      @map("usuario_id")
+  claveIdempotencia String      @map("clave_idempotencia")
+  creadoEn          DateTime    @default(now()) @map("creado_en")
+
+  sabor      Sabor       @relation(fields: [saborId], references: [id], onDelete: Restrict)
+  lote       Lote?       @relation(fields: [loteId], references: [id], onDelete: Restrict)
+  produccion Produccion? @relation(fields: [produccionId], references: [id], onDelete: Restrict)
+  causa      CausaMerma  @relation(fields: [causaId], references: [id], onDelete: Restrict)
+  usuario    Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+
+  @@unique([usuarioId, claveIdempotencia])
+  @@index([saborId, fecha])
+  @@index([causaId])
+  @@index([origen])
+  @@map("merma")
+}
+
+model Conteo {
+  id               String       @id @default(uuid())
+  fecha            DateTime     @db.Date
+  estado           EstadoConteo @default(ABIERTO)
+  usuarioId        String       @map("usuario_id")
+  autorizadoPorId  String?      @map("autorizado_por_id")
+  cerradoEn        DateTime?    @map("cerrado_en")
+  creadoEn         DateTime     @default(now()) @map("creado_en")
+
+  usuario       Usuario         @relation("ConteosRealizados", fields: [usuarioId], references: [id], onDelete: Restrict)
+  autorizadoPor Usuario?        @relation("ConteosAutorizados", fields: [autorizadoPorId], references: [id], onDelete: Restrict)
+  detalles      ConteoDetalle[]
+
+  @@index([estado])
+  @@index([fecha])
+  @@map("conteo")
+}
+
+model ConteoDetalle {
+  id           String @id @default(uuid())
+  conteoId     String @map("conteo_id")
+  saborId      String @map("sabor_id")
+  stockSistema Int    @map("stock_sistema")
+  stockFisico  Int?   @map("stock_fisico")
+  diferencia   Int?
+  motivo       String?
+
+  conteo Conteo  @relation(fields: [conteoId], references: [id], onDelete: Cascade)
+  sabor  Sabor   @relation(fields: [saborId], references: [id], onDelete: Restrict)
+  ajuste Ajuste?
+
+  @@unique([conteoId, saborId])
+  @@index([saborId])
+  @@map("conteo_detalle")
+}
+
+model Ajuste {
+  id              String   @id @default(uuid())
+  conteoDetalleId String   @unique @map("conteo_detalle_id")
+  saborId         String   @map("sabor_id")
+  loteId          String?  @map("lote_id")
+  movimientoId    String   @unique @map("movimiento_id")
+  cantidad        Int
+  motivo          String
+  autorizadoPorId String   @map("autorizado_por_id")
+  creadoEn        DateTime @default(now()) @map("creado_en")
+
+  conteoDetalle ConteoDetalle @relation(fields: [conteoDetalleId], references: [id], onDelete: Cascade)
+  sabor         Sabor         @relation(fields: [saborId], references: [id], onDelete: Restrict)
+  lote          Lote?         @relation(fields: [loteId], references: [id], onDelete: Restrict)
+  movimiento    Movimiento    @relation(fields: [movimientoId], references: [id], onDelete: Restrict)
+  autorizadoPor Usuario       @relation("AjustesAutorizados", fields: [autorizadoPorId], references: [id], onDelete: Restrict)
+
+  @@index([saborId])
+  @@map("ajuste")
+}
+
+model Auditoria {
+  id             String   @id @default(uuid())
+  fecha          DateTime @default(now())
+  usuarioId      String   @map("usuario_id")
+  entidad        String
+  entidadId      String   @map("entidad_id")
+  accion         String
+  movimientoId   String?  @map("movimiento_id")
+  valorAnterior  Json?    @map("valor_anterior")
+  valorNuevo     Json?    @map("valor_nuevo")
+  motivo         String?
+
+  usuario    Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+  movimiento Movimiento? @relation(fields: [movimientoId], references: [id], onDelete: Restrict)
+
+  @@index([entidad, entidadId])
+  @@index([usuarioId])
+  @@index([fecha])
+  @@map("auditoria")
+}
