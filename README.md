@@ -719,6 +719,28 @@ No hace falta desarrollar todos los módulos completos desde el primer día.
 | `infra/` | Compilación del APK en Docker y despliegue |
 | `test/` | Pruebas del sistema |
 
+## Despliegue
+
+El panel vive en **https://frozen.grupovalderrama.pe**, servido por nginx desde el `dist` del frontend, con la API detrás del mismo dominio en `/api`.
+
+| Pieza | Dónde |
+|---|---|
+| Panel web | `frontend/dist/frontend/browser`, servido como estático |
+| API | Servicio systemd `frozen-api` en `127.0.0.1:3300` |
+| Documentación | `https://frozen.grupovalderrama.pe/api/docs` |
+| TLS | Let's Encrypt por webroot (`/var/www/certbot`), renovación automática |
+| Nginx | `infra/frozen.grupovalderrama.pe.conf` |
+| Servicio | `infra/frozen-api.service` |
+
+El dominio pasa por Cloudflare, así que el origen lleva su propio certificado y Cloudflare debe quedar en modo **Full**.
+
+```bash
+cd frontend && pnpm build          # el build es el despliegue del panel
+cd backend && pnpm build && systemctl restart frozen-api
+```
+
+El panel se actualiza con solo compilar, porque nginx sirve el `dist` directamente. La API sí necesita reinicio.
+
 ## Entorno
 
 Node 22 vía nvm (`~/.nvm`) y pnpm. No se toca el node del sistema.
