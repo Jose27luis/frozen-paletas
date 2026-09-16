@@ -9,7 +9,8 @@ export type NombreIcono =
   | 'lotes'
   | 'sabores'
   | 'usuarios'
-  | 'salir';
+  | 'salir'
+  | 'desplegar';
 
 @Component({
   selector: 'fz-icono',
@@ -64,6 +65,9 @@ export type NombreIcono =
         @case ('usuarios') {
           <circle cx="12" cy="8" r="3.6" />
           <path d="M4.5 20.5a7.5 7.5 0 0 1 15 0" />
+        }
+        @case ('desplegar') {
+          <path d="m9.5 6 6 6-6 6" />
         }
         @case ('salir') {
           <path d="M15 4.5H6A1.5 1.5 0 0 0 4.5 6v12A1.5 1.5 0 0 0 6 19.5h9" />
