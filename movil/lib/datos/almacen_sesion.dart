@@ -9,6 +9,8 @@ class AlmacenSesion {
 
   static const String _llaveToken = 'frozen.token';
   static const String _llaveUsuario = 'frozen.usuario';
+  static const String _llaveCorreo = 'frozen.correo';
+  static const String _llavePassword = 'frozen.password';
 
   final FlutterSecureStorage _almacen;
 
@@ -49,4 +51,32 @@ class AlmacenSesion {
     await _almacen.delete(key: _llaveToken);
     await _almacen.delete(key: _llaveUsuario);
   }
+
+  Future<Credenciales?> leerRecordadas() async {
+    final String? correo = await _almacen.read(key: _llaveCorreo);
+    final String? password = await _almacen.read(key: _llavePassword);
+
+    if (correo == null || password == null) {
+      return null;
+    }
+
+    return Credenciales(correo: correo, password: password);
+  }
+
+  Future<void> recordar(String correo, String password) async {
+    await _almacen.write(key: _llaveCorreo, value: correo);
+    await _almacen.write(key: _llavePassword, value: password);
+  }
+
+  Future<void> olvidar() async {
+    await _almacen.delete(key: _llaveCorreo);
+    await _almacen.delete(key: _llavePassword);
+  }
+}
+
+class Credenciales {
+  const Credenciales({required this.correo, required this.password});
+
+  final String correo;
+  final String password;
 }
