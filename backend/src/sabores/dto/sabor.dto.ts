@@ -20,6 +20,13 @@ export class SaborDto {
   @ApiProperty({ example: 80, description: 'Umbral de reposición del sabor' })
   stockMinimo: number;
 
+  @ApiProperty({
+    example: '5.00',
+    nullable: true,
+    description: 'Precio por paleta que se propone al registrar una salida',
+  })
+  precio: string | null;
+
   @ApiProperty({ type: String, format: 'date-time' })
   creadoEn: Date;
 }
