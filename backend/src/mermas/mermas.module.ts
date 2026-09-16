@@ -4,11 +4,12 @@ import { SaboresModule } from '../sabores/sabores.module';
 import { CausasService } from './causas.service';
 import { MermasController } from './mermas.controller';
 import { MermasService } from './mermas.service';
+import { ResumenMermasService } from './resumen-mermas.service';
 
 @Module({
   imports: [InventarioModule, SaboresModule],
   controllers: [MermasController],
-  providers: [MermasService, CausasService],
+  providers: [MermasService, CausasService, ResumenMermasService],
   exports: [MermasService, CausasService],
 })
 export class MermasModule {}
