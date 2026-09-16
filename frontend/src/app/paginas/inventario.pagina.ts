@@ -6,11 +6,12 @@ import { CATEGORIAS, ESTADOS_STOCK, TIPOS_MOVIMIENTO } from '../nucleo/etiquetas
 import { fechaCorta, fechaLarga, miles } from '../nucleo/formato';
 import { InventarioService } from '../nucleo/inventario.service';
 import { LotesService } from '../nucleo/lotes.service';
-import { EstadoStock, Inventario, Lote, Movimiento, StockSabor } from '../nucleo/modelos';
+import { Inventario, Lote, Movimiento, StockSabor } from '../nucleo/modelos';
+import { RELLENO_DEL_STOCK, TONO_DEL_STOCK, URGENCIA_DEL_STOCK } from '../nucleo/estados';
 import { Campo } from '../ui/campo';
 import { CampoSeleccion, Opcion } from '../ui/campo-seleccion';
 import { Cargador } from '../ui/cargador';
-import { Chip, TonoChip } from '../ui/chip';
+import { Chip } from '../ui/chip';
 import { Icono } from '../ui/icono';
 
 type Orden = 'urgencia' | 'stock' | 'nombre' | 'antiguedad';
@@ -19,24 +20,6 @@ interface Detalle {
   lotes: Lote[];
   movimientos: Movimiento[];
 }
-
-const TONOS: Readonly<Record<EstadoStock, TonoChip>> = {
-  DISPONIBLE: 'hoja',
-  REPONER: 'aguaje',
-  AGOTADO: 'granate',
-};
-
-const RELLENOS: Readonly<Record<EstadoStock, string>> = {
-  DISPONIBLE: 'bg-hoja',
-  REPONER: 'bg-aguaje-vivo',
-  AGOTADO: 'bg-granate',
-};
-
-const URGENCIA: Readonly<Record<EstadoStock, number>> = {
-  AGOTADO: 0,
-  REPONER: 1,
-  DISPONIBLE: 2,
-};
 
 const FILTROS: readonly { valor: string; texto: string }[] = [
   { valor: 'TODOS', texto: 'Todos' },
@@ -150,7 +133,7 @@ const ESCALA_SOBRE_MINIMO = 2;
                     <span class="relative block h-full">
                       <span
                         class="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500 ease-out"
-                        [class]="RELLENOS[sabor.estado]"
+                        [class]="RELLENO_DEL_STOCK[sabor.estado]"
                         [style.width.%]="ancho(sabor)"
                       ></span>
                       <span
@@ -171,7 +154,9 @@ const ESCALA_SOBRE_MINIMO = 2;
 
                 <span class="shrink-0 text-right">
                   <span class="cifra block text-2xl">{{ miles(sabor.stock) }}</span>
-                  <fz-chip [tono]="TONOS[sabor.estado]">{{ ESTADOS_STOCK[sabor.estado] }}</fz-chip>
+                  <fz-chip [tono]="TONO_DEL_STOCK[sabor.estado]">{{
+                    ESTADOS_STOCK[sabor.estado]
+                  }}</fz-chip>
                 </span>
 
                 <span
@@ -379,8 +364,8 @@ export class InventarioPagina {
   protected readonly CATEGORIAS = CATEGORIAS;
   protected readonly ESTADOS_STOCK = ESTADOS_STOCK;
   protected readonly TIPOS_MOVIMIENTO = TIPOS_MOVIMIENTO;
-  protected readonly TONOS = TONOS;
-  protected readonly RELLENOS = RELLENOS;
+  protected readonly TONO_DEL_STOCK = TONO_DEL_STOCK;
+  protected readonly RELLENO_DEL_STOCK = RELLENO_DEL_STOCK;
   protected readonly FILTROS = FILTROS;
   protected readonly ORDENES = ORDENES;
   protected readonly TIPOS = TIPOS;
@@ -473,7 +458,7 @@ export class InventarioPagina {
       return (otro.loteMasAntiguo?.antiguedad ?? -1) - (uno.loteMasAntiguo?.antiguedad ?? -1);
     }
 
-    const urgencia = URGENCIA[uno.estado] - URGENCIA[otro.estado];
+    const urgencia = URGENCIA_DEL_STOCK[uno.estado] - URGENCIA_DEL_STOCK[otro.estado];
 
     return urgencia === 0 ? uno.stock - otro.stock : urgencia;
   }
