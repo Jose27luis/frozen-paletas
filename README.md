@@ -204,7 +204,7 @@ erDiagram
 | `produccion` | Fecha, sabor, cantidad obtenida, cantidad embolsada, merma, responsable y estado |
 | `lote` | Código, sabor, fecha de producción, cantidad ingresada y stock restante |
 | `movimiento` | Libro mayor del inventario: fecha, tipo, sabor, lote, cantidad con signo, usuario y referencia |
-| `salida` y `salida_detalle` | Cabecera con fecha, tipo y destino; detalle con sabor, lote, cantidad y precio |
+| `salida` y `salida_detalle` | Cabecera con fecha, tipo, destino y lista de precios; detalle con sabor, lote, cantidad y precio |
 | `destino` | Puntos de venta, clientes mayoristas, ferias y clientes de delivery |
 | `merma` | Fecha, sabor, lote, cantidad, causa, observación y responsable |
 | `conteo` y `conteo_detalle` | Conteo físico quincenal con stock del sistema, stock contado y diferencia |
@@ -267,15 +267,17 @@ Cocona, lúcuma, dulce de leche y pisco sour.
 
 Cada sabor lleva su propio **precio por unidad** y su **precio por mayor**, porque ni todos los sabores valen lo mismo ni se cobra igual a un consumidor que a un punto de venta. Los dos son opcionales y viven en el sabor, no en una constante del sistema.
 
-| Canal de salida | Precio que se aplica |
+**Con cuál de las dos se cobra lo elige quien registra la salida**, no el canal. El canal solo propone la lista que suele usarse, porque un pedido de delivery grande puede ser por mayor y un punto de venta puede llevarse unas pocas al precio de unidad:
+
+| Canal de salida | Lista que se propone |
 |---|---|
-| Delivery | Por unidad |
-| Feria | Por unidad |
 | Punto de venta | Por mayor |
 | Cliente mayorista | Por mayor |
+| Delivery | Por unidad |
+| Feria | Por unidad |
 | Otra salida | Por unidad |
 
-Al registrar una salida cada línea se rellena con el precio que toca según el canal, y quien despacha puede cambiarlo en esa línea sin tocar el catálogo.
+Cada salida guarda con qué lista se cobró, así que el histórico no obliga a adivinarlo. Elegida la lista, cada línea se rellena con el precio que corresponde y quien despacha puede cambiarlo en esa línea sin tocar el catálogo.
 
 Solo los sabores activos generan alertas de stock. Un sabor próximo existe en el catálogo y se puede producir para prueba, pero no entra en la lista de reposición.
 
@@ -434,6 +436,7 @@ Registrar hacia dónde salen las paletas y descontarlas automáticamente del inv
 
 - Fecha.
 - Tipo de salida.
+- Lista de precios con la que se cobra.
 - Cliente, PDV o destino.
 - Sabor.
 - Cantidad.
