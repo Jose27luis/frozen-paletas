@@ -26,6 +26,8 @@ interface Linea {
 
 const TIPOS_CON_DESTINO: readonly TipoSalida[] = ['PDV', 'MAYORISTA', 'DELIVERY', 'FERIA'];
 
+const CANALES_POR_MAYOR: readonly TipoSalida[] = ['PDV', 'MAYORISTA'];
+
 const PEDIDO_MINIMO_DELIVERY = 12;
 const PRECIO_DELIVERY = 5;
 
@@ -317,6 +319,8 @@ export class SalidasPagina {
 
   protected readonly pideDestino = computed(() => TIPOS_CON_DESTINO.includes(this.tipo()));
 
+  protected readonly esPorMayor = computed(() => CANALES_POR_MAYOR.includes(this.tipo()));
+
   protected readonly pideMotivo = computed(() => this.tipo() === 'OTRA' || this.destinoId() === '');
 
   protected readonly opcionesDeSabor = computed<Opcion[]>(() =>
@@ -342,11 +346,15 @@ export class SalidasPagina {
 
   protected readonly reglaDelTipo = computed(() => {
     if (this.tipo() === 'DELIVERY') {
-      return `Pedido mínimo de ${PEDIDO_MINIMO_DELIVERY} paletas a S/ ${PRECIO_DELIVERY}.00, con reparto gratis en Puerto Maldonado.`;
+      return `Pedido mínimo de ${PEDIDO_MINIMO_DELIVERY} paletas y precio por unidad, con reparto gratis en Puerto Maldonado.`;
+    }
+
+    if (this.esPorMayor()) {
+      return 'Se cobra al precio por mayor de cada sabor.';
     }
 
     return this.pideDestino()
-      ? 'Elige a quién se despacha y qué sabores salieron.'
+      ? 'Se cobra al precio por unidad de cada sabor.'
       : 'Explica el motivo y qué sabores salieron.';
   });
 
@@ -430,6 +438,11 @@ export class SalidasPagina {
     this.tipo.set(valor as TipoSalida);
     this.destinoId.set('');
     this.nuevoDestino.set(false);
+    this.lineas.update((lineas) =>
+      lineas.map((linea) =>
+        linea.saborId === '' ? linea : { ...linea, precio: this.precioSugerido(linea.saborId) },
+      ),
+    );
   }
 
   protected cambiarSabor(indice: number, valor: string): void {
@@ -449,22 +462,40 @@ export class SalidasPagina {
       return 'Elige primero el sabor.';
     }
 
-    const sabor = this.sabores().find((fila) => fila.id === linea.saborId);
+    const delCatalogo = this.precioDelCatalogo(linea.saborId);
 
-    if (sabor?.precio != null) {
-      return `El sabor tiene ${soles(sabor.precio)} de precio.`;
+    if (delCatalogo !== null) {
+      return `Precio ${this.nombreDeLaLista()} del sabor: ${soles(delCatalogo.toFixed(2))}.`;
     }
 
-    return this.tipo() === 'DELIVERY'
-      ? `Sin precio propio; el delivery usa S/ ${PRECIO_DELIVERY}.00.`
-      : 'Este sabor no tiene precio puesto en el catálogo.';
+    if (this.tipo() === 'DELIVERY') {
+      return `Este sabor no tiene precio por unidad; el delivery usa S/ ${PRECIO_DELIVERY}.00.`;
+    }
+
+    return `Este sabor no tiene precio ${this.nombreDeLaLista()} en el catálogo.`;
+  }
+
+  private nombreDeLaLista(): string {
+    return this.esPorMayor() ? 'por mayor' : 'por unidad';
+  }
+
+  private precioDelCatalogo(saborId: string): number | null {
+    const sabor = this.sabores().find((fila) => fila.id === saborId);
+
+    if (sabor === undefined) {
+      return null;
+    }
+
+    const precio = this.esPorMayor() ? sabor.precioMayor : sabor.precioUnidad;
+
+    return precio === null ? null : Number(precio);
   }
 
   private precioSugerido(saborId: string): number | null {
-    const sabor = this.sabores().find((fila) => fila.id === saborId);
+    const delCatalogo = this.precioDelCatalogo(saborId);
 
-    if (sabor?.precio != null) {
-      return Number(sabor.precio);
+    if (delCatalogo !== null) {
+      return delCatalogo;
     }
 
     return this.tipo() === 'DELIVERY' ? PRECIO_DELIVERY : null;
