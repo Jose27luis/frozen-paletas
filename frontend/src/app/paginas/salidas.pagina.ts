@@ -2,11 +2,19 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { AvisosService } from '../nucleo/avisos.service';
 import { DestinosService } from '../nucleo/destinos.service';
 import { mensajeDe } from '../nucleo/errores';
-import { PERMISOS, TIPOS_SALIDA } from '../nucleo/etiquetas';
+import { LISTAS_PRECIOS, PERMISOS, TIPOS_SALIDA } from '../nucleo/etiquetas';
 import { fechaCorta, hoyEnIso, miles, soles } from '../nucleo/formato';
 import { InventarioService } from '../nucleo/inventario.service';
 import { LotesService } from '../nucleo/lotes.service';
-import { Destino, Lote, Sabor, Salida, StockSabor, TipoSalida } from '../nucleo/modelos';
+import {
+  Destino,
+  ListaPrecios,
+  Lote,
+  Sabor,
+  Salida,
+  StockSabor,
+  TipoSalida,
+} from '../nucleo/modelos';
 import { SaboresService } from '../nucleo/sabores.service';
 import { SalidasService } from '../nucleo/salidas.service';
 import { SesionService } from '../nucleo/sesion.service';
@@ -27,6 +35,14 @@ interface Linea {
 const TIPOS_CON_DESTINO: readonly TipoSalida[] = ['PDV', 'MAYORISTA', 'DELIVERY', 'FERIA'];
 
 const CANALES_POR_MAYOR: readonly TipoSalida[] = ['PDV', 'MAYORISTA'];
+
+const OPCIONES_LISTA: readonly Opcion[] = (Object.keys(LISTAS_PRECIOS) as ListaPrecios[]).map(
+  (lista) => ({ valor: lista, texto: LISTAS_PRECIOS[lista] }),
+);
+
+function listaHabitualDe(tipo: TipoSalida): ListaPrecios {
+  return CANALES_POR_MAYOR.includes(tipo) ? 'MAYOR' : 'UNIDAD';
+}
 
 const PEDIDO_MINIMO_DELIVERY = 12;
 const PRECIO_DELIVERY = 5;
@@ -64,6 +80,14 @@ function lineaVacia(): Linea {
                 [opciones]="OPCIONES_TIPO"
                 [valor]="tipo()"
                 (valorChange)="cambiarTipo($event)"
+              />
+
+              <fz-campo-seleccion
+                etiqueta="Lista de precios"
+                ayuda="Se propone la del canal, pero puedes cambiarla."
+                [opciones]="OPCIONES_LISTA"
+                [valor]="lista()"
+                (valorChange)="cambiarLista($event)"
               />
 
               @if (pideDestino()) {
@@ -245,6 +269,9 @@ function lineaVacia(): Linea {
                     <td class="celda text-sm whitespace-nowrap">{{ fechaCorta(salida.fecha) }}</td>
                     <td class="celda">
                       <fz-chip tono="helado">{{ TIPOS_SALIDA[salida.tipo] }}</fz-chip>
+                      <span class="block pt-1 text-xs text-tenue">{{
+                        LISTAS_PRECIOS[salida.listaPrecios]
+                      }}</span>
                     </td>
                     <td class="celda text-sm">{{ salida.destino ?? salida.motivo ?? '—' }}</td>
                     <td class="celda text-xs text-tenue">
@@ -288,6 +315,7 @@ export class SalidasPagina {
   protected readonly cargando = signal(true);
 
   protected readonly tipo = signal<TipoSalida>('PDV');
+  protected readonly lista = signal<ListaPrecios>('MAYOR');
   protected readonly destinoId = signal('');
   protected readonly motivo = signal('');
   protected readonly fecha = signal(hoyEnIso());
@@ -307,6 +335,8 @@ export class SalidasPagina {
 
   protected readonly OPCIONES_TIPO = OPCIONES_TIPO;
   protected readonly TIPOS_SALIDA = TIPOS_SALIDA;
+  protected readonly LISTAS_PRECIOS = LISTAS_PRECIOS;
+  protected readonly OPCIONES_LISTA = OPCIONES_LISTA;
   protected readonly fechaCorta = fechaCorta;
   protected readonly miles = miles;
   protected readonly soles = soles;
@@ -319,7 +349,7 @@ export class SalidasPagina {
 
   protected readonly pideDestino = computed(() => TIPOS_CON_DESTINO.includes(this.tipo()));
 
-  protected readonly esPorMayor = computed(() => CANALES_POR_MAYOR.includes(this.tipo()));
+  protected readonly esPorMayor = computed(() => this.lista() === 'MAYOR');
 
   protected readonly pideMotivo = computed(() => this.tipo() === 'OTRA' || this.destinoId() === '');
 
@@ -345,17 +375,13 @@ export class SalidasPagina {
   );
 
   protected readonly reglaDelTipo = computed(() => {
+    const cobro = `Se cobra con la lista ${this.esPorMayor() ? 'por mayor' : 'por unidad'}.`;
+
     if (this.tipo() === 'DELIVERY') {
-      return `Pedido mínimo de ${PEDIDO_MINIMO_DELIVERY} paletas y precio por unidad, con reparto gratis en Puerto Maldonado.`;
+      return `Pedido mínimo de ${PEDIDO_MINIMO_DELIVERY} paletas, reparto gratis en Puerto Maldonado. ${cobro}`;
     }
 
-    if (this.esPorMayor()) {
-      return 'Se cobra al precio por mayor de cada sabor.';
-    }
-
-    return this.pideDestino()
-      ? 'Se cobra al precio por unidad de cada sabor.'
-      : 'Explica el motivo y qué sabores salieron.';
+    return this.pideDestino() ? cobro : `Explica el motivo de la salida. ${cobro}`;
   });
 
   protected readonly impedimento = computed(() => {
@@ -435,9 +461,21 @@ export class SalidasPagina {
   }
 
   protected cambiarTipo(valor: string): void {
-    this.tipo.set(valor as TipoSalida);
+    const tipo = valor as TipoSalida;
+
+    this.tipo.set(tipo);
+    this.lista.set(listaHabitualDe(tipo));
     this.destinoId.set('');
     this.nuevoDestino.set(false);
+    this.recalcularPrecios();
+  }
+
+  protected cambiarLista(valor: string): void {
+    this.lista.set(valor as ListaPrecios);
+    this.recalcularPrecios();
+  }
+
+  private recalcularPrecios(): void {
     this.lineas.update((lineas) =>
       lineas.map((linea) =>
         linea.saborId === '' ? linea : { ...linea, precio: this.precioSugerido(linea.saborId) },
@@ -569,6 +607,7 @@ export class SalidasPagina {
     try {
       const salida = await this.salidasService.registrar({
         tipo: this.tipo(),
+        listaPrecios: this.lista(),
         destinoId: this.destinoId() === '' ? undefined : this.destinoId(),
         motivo: this.motivo() === '' ? undefined : this.motivo(),
         fecha: this.fecha(),
