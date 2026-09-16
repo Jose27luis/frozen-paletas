@@ -5,10 +5,11 @@ import { mensajeDe } from '../nucleo/errores';
 import { ESTADOS_PRODUCCION, TIPOS_SALIDA } from '../nucleo/etiquetas';
 import { fechaCorta, haceDias, hoyEnIso, miles } from '../nucleo/formato';
 import { Indicadores, IndicadorSabor } from '../nucleo/indicadores';
-import { EstadoStock, Panel } from '../nucleo/modelos';
+import { Panel } from '../nucleo/modelos';
+import { TONO_DEL_STOCK } from '../nucleo/estados';
 import { PanelService } from '../nucleo/panel.service';
 import { SesionService } from '../nucleo/sesion.service';
-import { Barras, FilaBarra, TonoBarra } from '../ui/barras';
+import { Barras, FilaBarra } from '../ui/barras';
 import { Cargador } from '../ui/cargador';
 import { Kpi } from '../ui/kpi';
 
@@ -46,12 +47,6 @@ const VISTAS: Readonly<Record<Metrica, Vista>> = {
     pie: 'Al ritmo de salida del periodo. Los primeros son los que se acaban antes.',
     vacio: 'Sin salidas en el periodo no se puede calcular la cobertura.',
   },
-};
-
-const TONOS_ESTADO: Readonly<Record<EstadoStock, TonoBarra>> = {
-  DISPONIBLE: 'hoja',
-  REPONER: 'aguaje',
-  AGOTADO: 'granate',
 };
 
 const PERIODOS = [7, 30, 90] as const;
@@ -280,7 +275,7 @@ export class PanelPagina {
           detalle: `${sabor.stock} paletas, mínimo ${sabor.stockMinimo}`,
           valor: sabor.stock,
           referencia: sabor.stockMinimo,
-          tono: TONOS_ESTADO[sabor.estado],
+          tono: TONO_DEL_STOCK[sabor.estado],
         }));
     }
 
