@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { AvisosService } from '../nucleo/avisos.service';
 import { mensajeDe } from '../nucleo/errores';
 import { ORIGENES_MERMA, PERMISOS } from '../nucleo/etiquetas';
-import { fechaCorta, haceDias, hoyEnIso, miles } from '../nucleo/formato';
+import { fechaCorta, fechaLarga, haceDias, hoyEnIso, miles } from '../nucleo/formato';
 import { InventarioService } from '../nucleo/inventario.service';
 import { LotesService } from '../nucleo/lotes.service';
 import { MermasService, ResumenMermas } from '../nucleo/mermas.service';
@@ -15,6 +15,7 @@ import { CampoNumero } from '../ui/campo-numero';
 import { CampoSeleccion, Opcion } from '../ui/campo-seleccion';
 import { Cargador } from '../ui/cargador';
 import { Chip } from '../ui/chip';
+import { Modal } from '../ui/modal';
 
 const PERIODOS = [7, 30, 90] as const;
 
@@ -24,7 +25,7 @@ const OPCIONES_ORIGEN: readonly Opcion[] = (Object.keys(ORIGENES_MERMA) as Orige
 
 @Component({
   selector: 'fz-mermas-pagina',
-  imports: [Barras, Boton, Campo, CampoNumero, CampoSeleccion, Cargador, Chip],
+  imports: [Barras, Boton, Campo, CampoNumero, CampoSeleccion, Cargador, Chip, Modal],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex flex-wrap items-end justify-between gap-4">
@@ -142,27 +143,69 @@ const OPCIONES_ORIGEN: readonly Opcion[] = (Object.keys(ORIGENES_MERMA) as Orige
             <section class="lamina p-6">
               <h2 class="titulo text-base">Causas</h2>
               <p class="pt-1 pb-4 text-sm text-tenue">
-                Una causa con mermas registradas no se borra, se desactiva.
+                Una causa que ya se usó no se puede eliminar, solo desactivar: el histórico perdería
+                el motivo.
               </p>
 
               <ul class="space-y-1">
                 @for (causa of causas(); track causa.id) {
-                  <li class="flex items-center justify-between gap-3 border-t border-linea py-2">
-                    <span class="min-w-0">
-                      <span class="block truncate text-sm" [class.text-tenue]="!causa.activa">{{
-                        causa.nombre
-                      }}</span>
-                      @if (causa.requiereDescripcion) {
-                        <span class="text-xs text-tenue">pide observación</span>
-                      }
-                    </span>
-                    <button
-                      type="button"
-                      class="shrink-0 text-sm text-tenue transition-colors hover:text-helado-hondo"
-                      (click)="alternarCausa(causa)"
-                    >
-                      {{ causa.activa ? 'Desactivar' : 'Activar' }}
-                    </button>
+                  <li class="border-t border-linea py-2">
+                    <div class="flex items-center justify-between gap-3">
+                      <span class="min-w-0">
+                        <span class="block truncate text-sm" [class.text-tenue]="!causa.activa">{{
+                          causa.nombre
+                        }}</span>
+                        <span class="flex flex-wrap items-baseline gap-x-2 text-xs text-tenue">
+                          @if (causa.requiereDescripcion) {
+                            <span>pide observación</span>
+                          }
+                          <span>{{ causa.usos }} mermas</span>
+                        </span>
+                      </span>
+
+                      <span class="flex shrink-0 gap-3">
+                        <button
+                          type="button"
+                          class="text-sm text-tenue transition-colors hover:text-helado-hondo"
+                          (click)="alternarCausa(causa)"
+                        >
+                          {{ causa.activa ? 'Desactivar' : 'Activar' }}
+                        </button>
+                        @if (causa.usos === 0) {
+                          <button
+                            type="button"
+                            class="text-sm text-granate transition-colors hover:underline"
+                            (click)="pedirEliminar(causa)"
+                          >
+                            Eliminar
+                          </button>
+                        }
+                      </span>
+                    </div>
+
+                    @if (eliminando() === causa.id) {
+                      <div
+                        class="mt-2 rounded-[var(--radius-campo)] border border-granate/40 bg-granate/5 p-3"
+                      >
+                        <p class="text-sm">Se borra del catálogo y no se puede deshacer.</p>
+                        <div class="flex gap-3 pt-2">
+                          <button
+                            type="button"
+                            class="text-sm text-granate transition-colors hover:underline"
+                            (click)="eliminarCausa(causa)"
+                          >
+                            Sí, eliminar
+                          </button>
+                          <button
+                            type="button"
+                            class="text-sm text-tenue transition-colors hover:text-tinta"
+                            (click)="eliminando.set(null)"
+                          >
+                            Mejor no
+                          </button>
+                        </div>
+                      </div>
+                    }
                   </li>
                 }
               </ul>
@@ -230,6 +273,7 @@ const OPCIONES_ORIGEN: readonly Opcion[] = (Object.keys(ORIGENES_MERMA) as Orige
                     <th class="encabezado-tabla">Causa</th>
                     <th class="encabezado-tabla">Origen</th>
                     <th class="encabezado-tabla text-right">Paletas</th>
+                    <th class="encabezado-tabla"><span class="sr-only">Detalle</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -250,10 +294,19 @@ const OPCIONES_ORIGEN: readonly Opcion[] = (Object.keys(ORIGENES_MERMA) as Orige
                         }}</fz-chip>
                       </td>
                       <td class="celda cifra text-right text-sm">{{ merma.cantidad }}</td>
+                      <td class="celda text-right">
+                        <button
+                          type="button"
+                          class="text-sm text-helado-hondo underline underline-offset-4 transition-colors hover:text-tinta"
+                          (click)="detalle.set(merma)"
+                        >
+                          Ver
+                        </button>
+                      </td>
                     </tr>
                   } @empty {
                     <tr>
-                      <td class="celda text-sm text-tenue" colspan="6">
+                      <td class="celda text-sm text-tenue" colspan="7">
                         No hay mermas con esos filtros.
                       </td>
                     </tr>
@@ -264,6 +317,58 @@ const OPCIONES_ORIGEN: readonly Opcion[] = (Object.keys(ORIGENES_MERMA) as Orige
           </section>
         </div>
       </div>
+    }
+
+    @if (detalle(); as merma) {
+      <fz-modal
+        [titulo]="merma.sabor"
+        [subtitulo]="subtituloDelDetalle(merma)"
+        (cerrado)="detalle.set(null)"
+      >
+        <dl class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <dt class="rotulo">Paletas perdidas</dt>
+            <dd class="cifra pt-0.5 text-2xl text-granate">{{ merma.cantidad }}</dd>
+          </div>
+
+          <div>
+            <dt class="rotulo">Lote</dt>
+            <dd class="cifra pt-0.5 text-sm">{{ merma.lote ?? 'Sin lote' }}</dd>
+          </div>
+
+          <div>
+            <dt class="rotulo">Causa</dt>
+            <dd class="pt-0.5 text-sm">{{ merma.causa }}</dd>
+          </div>
+
+          <div>
+            <dt class="rotulo">Origen</dt>
+            <dd class="pt-0.5 text-sm">{{ ORIGENES_MERMA[merma.origen] }}</dd>
+          </div>
+
+          <div>
+            <dt class="rotulo">Quién lo registró</dt>
+            <dd class="pt-0.5 text-sm">{{ merma.responsable }}</dd>
+          </div>
+
+          <div>
+            <dt class="rotulo">Fecha</dt>
+            <dd class="pt-0.5 text-sm">{{ fechaLarga(merma.fecha) }}</dd>
+          </div>
+
+          <div class="sm:col-span-2">
+            <dt class="rotulo">Observación</dt>
+            <dd class="pt-0.5 text-sm">{{ merma.observacion ?? 'Sin observación' }}</dd>
+          </div>
+        </dl>
+
+        <p
+          class="mt-5 rounded-[var(--radius-campo)] p-4 text-sm"
+          [class]="merma.descontoStock ? 'bg-granate/8 text-granate' : 'bg-hundido text-tenue'"
+        >
+          {{ explicacionDelOrigen(merma) }}
+        </p>
+      </fz-modal>
     }
   `,
 })
@@ -294,6 +399,9 @@ export class MermasPagina {
   protected readonly causaPideTexto = signal(false);
   protected readonly creandoCausa = signal(false);
 
+  protected readonly detalle = signal<Merma | null>(null);
+  protected readonly eliminando = signal<string | null>(null);
+
   protected readonly filtroOrigen = signal('');
   protected readonly filtroCausa = signal('');
 
@@ -301,6 +409,7 @@ export class MermasPagina {
   protected readonly OPCIONES_ORIGEN = OPCIONES_ORIGEN;
   protected readonly ORIGENES_MERMA = ORIGENES_MERMA;
   protected readonly fechaCorta = fechaCorta;
+  protected readonly fechaLarga = fechaLarga;
   protected readonly miles = miles;
 
   protected readonly puedeRegistrar = computed(() => this.sesion.puede(PERMISOS.REGISTRAR_MERMAS));
@@ -402,6 +511,31 @@ export class MermasPagina {
       this.avisos.error(mensajeDe(error));
     } finally {
       this.creandoCausa.set(false);
+    }
+  }
+
+  protected subtituloDelDetalle(merma: Merma): string {
+    return `${merma.causa}, ${fechaLarga(merma.fecha)}`;
+  }
+
+  protected explicacionDelOrigen(merma: Merma): string {
+    return merma.descontoStock
+      ? 'Estas paletas ya estaban en el almacén, así que se descontaron del inventario.'
+      : 'Estas paletas se perdieron antes de entrar al stock, así que el inventario no se tocó: al ingresar solo se contaron las aptas.';
+  }
+
+  protected pedirEliminar(causa: CausaMerma): void {
+    this.eliminando.set(this.eliminando() === causa.id ? null : causa.id);
+  }
+
+  protected async eliminarCausa(causa: CausaMerma): Promise<void> {
+    try {
+      await this.mermasService.eliminarCausa(causa.id);
+      this.avisos.exito(`${causa.nombre} quedó eliminada del catálogo.`);
+      this.eliminando.set(null);
+      this.causas.set(await this.mermasService.causas());
+    } catch (error: unknown) {
+      this.avisos.error(mensajeDe(error));
     }
   }
 
