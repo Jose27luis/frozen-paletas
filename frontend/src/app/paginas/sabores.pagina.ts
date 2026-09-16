@@ -75,10 +75,16 @@ const TONOS: Readonly<Record<EstadoSabor, TonoChip>> = {
                 [(valor)]="stockMinimo"
               />
               <fz-campo-numero
-                etiqueta="Precio por paleta"
-                ayuda="Se propone al registrar una salida. Admite decimales."
+                etiqueta="Precio por unidad"
+                ayuda="Venta al público: delivery y ferias."
                 [paso]="0.01"
-                [(valor)]="precio"
+                [(valor)]="precioUnidad"
+              />
+              <fz-campo-numero
+                etiqueta="Precio por mayor"
+                ayuda="Puntos de venta y clientes mayoristas."
+                [paso]="0.01"
+                [(valor)]="precioMayor"
               />
             </div>
 
@@ -110,10 +116,16 @@ const TONOS: Readonly<Record<EstadoSabor, TonoChip>> = {
                         </span>
                         <span class="flex flex-wrap items-baseline gap-x-3 pt-1 text-xs text-tenue">
                           <span>mínimo {{ sabor.stockMinimo }}</span>
-                          @if (sabor.precio !== null) {
-                            <span class="text-tinta">{{ soles(sabor.precio) }} por paleta</span>
-                          } @else {
-                            <span>sin precio</span>
+                          @if (sabor.precioUnidad !== null) {
+                            <span class="text-tinta"
+                              >{{ soles(sabor.precioUnidad) }} por unidad</span
+                            >
+                          }
+                          @if (sabor.precioMayor !== null) {
+                            <span class="text-tinta">{{ soles(sabor.precioMayor) }} por mayor</span>
+                          }
+                          @if (sabor.precioUnidad === null && sabor.precioMayor === null) {
+                            <span>sin precios</span>
                           }
                           @if (contexto(sabor.id); as datos) {
                             <span>{{ datos.stock }} en stock</span>
@@ -168,10 +180,16 @@ const TONOS: Readonly<Record<EstadoSabor, TonoChip>> = {
                                 [(valor)]="editStockMinimo"
                               />
                               <fz-campo-numero
-                                etiqueta="Precio por paleta"
-                                ayuda="Vacío para que no se proponga ninguno."
+                                etiqueta="Precio por unidad"
+                                ayuda="Delivery y ferias."
                                 [paso]="0.01"
-                                [(valor)]="editPrecio"
+                                [(valor)]="editPrecioUnidad"
+                              />
+                              <fz-campo-numero
+                                etiqueta="Precio por mayor"
+                                ayuda="Puntos de venta y mayoristas."
+                                [paso]="0.01"
+                                [(valor)]="editPrecioMayor"
                               />
                             </div>
 
@@ -212,7 +230,8 @@ export class SaboresPagina {
   protected readonly categoria = signal('');
   protected readonly estado = signal<string>('ACTIVO');
   protected readonly stockMinimo = signal<number | null>(80);
-  protected readonly precio = signal<number | null>(null);
+  protected readonly precioUnidad = signal<number | null>(null);
+  protected readonly precioMayor = signal<number | null>(null);
   protected readonly enviando = signal(false);
 
   protected readonly abierto = signal<string | null>(null);
@@ -221,7 +240,8 @@ export class SaboresPagina {
   protected readonly editCategoria = signal('');
   protected readonly editEstado = signal('');
   protected readonly editStockMinimo = signal<number | null>(null);
-  protected readonly editPrecio = signal<number | null>(null);
+  protected readonly editPrecioUnidad = signal<number | null>(null);
+  protected readonly editPrecioMayor = signal<number | null>(null);
   protected readonly guardando = signal(false);
 
   protected readonly CATEGORIAS = CATEGORIAS;
@@ -281,7 +301,8 @@ export class SaboresPagina {
     this.editCategoria.set(sabor.categoria);
     this.editEstado.set(sabor.estado);
     this.editStockMinimo.set(sabor.stockMinimo);
-    this.editPrecio.set(sabor.precio === null ? null : Number(sabor.precio));
+    this.editPrecioUnidad.set(sabor.precioUnidad === null ? null : Number(sabor.precioUnidad));
+    this.editPrecioMayor.set(sabor.precioMayor === null ? null : Number(sabor.precioMayor));
   }
 
   protected async crear(evento: Event): Promise<void> {
@@ -301,7 +322,8 @@ export class SaboresPagina {
         categoria: this.categoria() as CategoriaSabor,
         estado: this.estado() as EstadoSabor,
         stockMinimo: this.stockMinimo() ?? undefined,
-        precio: this.precio() ?? undefined,
+        precioUnidad: this.precioUnidad() ?? undefined,
+        precioMayor: this.precioMayor() ?? undefined,
       });
 
       this.avisos.exito('Sabor añadido al catálogo.');
@@ -334,7 +356,8 @@ export class SaboresPagina {
         categoria: this.editCategoria() as CategoriaSabor,
         estado: this.editEstado() as EstadoSabor,
         stockMinimo: this.editStockMinimo() ?? undefined,
-        precio: this.editPrecio() ?? undefined,
+        precioUnidad: this.editPrecioUnidad() ?? undefined,
+        precioMayor: this.editPrecioMayor() ?? undefined,
       });
 
       this.avisos.exito(`${guardado.nombre} quedó actualizado.`);
