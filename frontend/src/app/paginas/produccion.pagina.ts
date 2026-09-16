@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { AvisosService } from '../nucleo/avisos.service';
 import { mensajeDe } from '../nucleo/errores';
 import { ESTADOS_PRODUCCION, PERMISOS } from '../nucleo/etiquetas';
+import { TONO_DE_LA_PRODUCCION } from '../nucleo/estados';
 import { fechaCorta, hoyEnIso, miles } from '../nucleo/formato';
 import { InventarioService } from '../nucleo/inventario.service';
 import { MermasService } from '../nucleo/mermas.service';
@@ -257,7 +258,7 @@ const MILISEGUNDOS_POR_DIA = 24 * 60 * 60 * 1000;
                         {{ rendimientoDe(produccion) }}
                       </td>
                       <td class="celda">
-                        <fz-chip [tono]="tonoDe(produccion)">{{
+                        <fz-chip [tono]="TONO_DE_LA_PRODUCCION[produccion.estado]">{{
                           ESTADOS_PRODUCCION[produccion.estado]
                         }}</fz-chip>
                       </td>
@@ -309,6 +310,7 @@ export class ProduccionPagina {
   protected readonly confirmando = signal(false);
 
   protected readonly ESTADOS_PRODUCCION = ESTADOS_PRODUCCION;
+  protected readonly TONO_DE_LA_PRODUCCION = TONO_DE_LA_PRODUCCION;
   protected readonly fechaCorta = fechaCorta;
   protected readonly miles = miles;
 
@@ -403,14 +405,6 @@ export class ProduccionPagina {
     }
 
     return `${((produccion.cantidadEmbolsada / produccion.cantidadObtenida) * 100).toFixed(1)}%`;
-  }
-
-  protected tonoDe(produccion: Produccion): 'hoja' | 'aguaje' | 'neutro' {
-    if (produccion.estado === 'EMBOLSADA') {
-      return 'hoja';
-    }
-
-    return produccion.estado === 'REGISTRADA' ? 'aguaje' : 'neutro';
   }
 
   protected elegirSabor(sabor: StockSabor): void {
