@@ -4,7 +4,7 @@ import { Cargador } from './cargador';
 type Tono = 'primario' | 'contorno' | 'fantasma' | 'alerta';
 
 const TONOS: Readonly<Record<Tono, string>> = {
-  primario: 'bg-helado text-superficie hover:bg-helado-hondo',
+  primario: 'bg-helado-hondo text-superficie hover:bg-tinta',
   contorno: 'border border-linea text-tinta hover:border-helado hover:text-helado-hondo',
   fantasma: 'text-tenue hover:text-helado-hondo',
   alerta: 'border border-granate/40 text-granate hover:bg-granate hover:text-superficie',
