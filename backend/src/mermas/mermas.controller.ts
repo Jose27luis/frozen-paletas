@@ -31,6 +31,7 @@ import { MermaDto } from './dto/merma.dto';
 import { RangoMermasDto } from './dto/rango-mermas.dto';
 import { RegistrarMermaDto } from './dto/registrar-merma.dto';
 import { ResumenMermasDto } from './dto/resumen-mermas.dto';
+import { ResumenMermasService } from './resumen-mermas.service';
 import { MermasService } from './mermas.service';
 
 @ApiTags('Mermas')
@@ -40,6 +41,7 @@ export class MermasController {
   constructor(
     private readonly mermasService: MermasService,
     private readonly causasService: CausasService,
+    private readonly resumenService: ResumenMermasService,
   ) {}
 
   @Post()
@@ -71,7 +73,7 @@ export class MermasController {
   })
   @ApiOkResponse({ type: ResumenMermasDto })
   resumen(@Query() rango: RangoMermasDto): Promise<ResumenMermasDto> {
-    return this.mermasService.resumen(rango);
+    return this.resumenService.calcular(rango);
   }
 
   @Get('causas')
