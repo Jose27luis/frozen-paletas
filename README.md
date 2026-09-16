@@ -200,7 +200,7 @@ erDiagram
 
 | Entidad | Contenido |
 |---|---|
-| `sabor` | Nombre, abreviatura, categoría, estado (activo o próximo), stock mínimo y precio por paleta |
+| `sabor` | Nombre, abreviatura, categoría, estado (activo o próximo), stock mínimo y sus precios por unidad y por mayor |
 | `produccion` | Fecha, sabor, cantidad obtenida, cantidad embolsada, merma, responsable y estado |
 | `lote` | Código, sabor, fecha de producción, cantidad ingresada y stock restante |
 | `movimiento` | Libro mayor del inventario: fecha, tipo, sabor, lote, cantidad con signo, usuario y referencia |
@@ -263,9 +263,19 @@ Cocona, lúcuma, dulce de leche y pisco sour.
 - Activar o desactivar sabor.
 - Clasificar sabores por categoría.
 - Diferenciar entre **activo** y **próximo/inactivo**.
-- Fijar el **stock mínimo** y el **precio por paleta** de cada sabor.
+- Fijar el **stock mínimo** y los **dos precios** de cada sabor.
 
-No todos los sabores valen lo mismo, así que el precio vive en el sabor y no en una constante del sistema. Al registrar una salida se propone el precio del sabor; quien despacha puede cambiarlo en esa línea sin tocar el catálogo.
+Cada sabor lleva su propio **precio por unidad** y su **precio por mayor**, porque ni todos los sabores valen lo mismo ni se cobra igual a un consumidor que a un punto de venta. Los dos son opcionales y viven en el sabor, no en una constante del sistema.
+
+| Canal de salida | Precio que se aplica |
+|---|---|
+| Delivery | Por unidad |
+| Feria | Por unidad |
+| Punto de venta | Por mayor |
+| Cliente mayorista | Por mayor |
+| Otra salida | Por unidad |
+
+Al registrar una salida cada línea se rellena con el precio que toca según el canal, y quien despacha puede cambiarlo en esa línea sin tocar el catálogo.
 
 Solo los sabores activos generan alertas de stock. Un sabor próximo existe en el catálogo y se puede producir para prueba, pero no entra en la lista de reposición.
 
@@ -416,7 +426,7 @@ Registrar hacia dónde salen las paletas y descontarlas automáticamente del inv
 |---|---|
 | Punto de venta | Abastecimiento a establecimientos incorporados como PDV de Frozen |
 | Cliente mayorista | Persona o comercio que compra cantidad mayorista, por ejemplo 100 paletas, sin pertenecer a la red de PDV |
-| Delivery | Venta directa al consumidor. Pedido mínimo de **12 unidades**, con delivery gratuito dentro de Puerto Maldonado. Si el sabor no tiene precio propio se cobran **S/ 5.00 por paleta** |
+| Delivery | Venta directa al consumidor. Pedido mínimo de **12 unidades**, con delivery gratuito dentro de Puerto Maldonado. Se cobra el precio por unidad del sabor, y **S/ 5.00** si no tiene uno puesto |
 | Feria | Paletas retiradas del inventario para comercializar en ferias |
 | Otra salida | Movimientos excepcionales. El motivo es obligatorio |
 
