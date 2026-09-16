@@ -167,6 +167,7 @@ export interface CausaMerma {
   nombre: string;
   requiereDescripcion: boolean;
   activa: boolean;
+  usos: number;
 }
 
 export interface Merma {
