@@ -57,6 +57,11 @@ enum TipoSalida {
   OTRA
 }
 
+enum ListaPrecios {
+  UNIDAD
+  MAYOR
+}
+
 enum OrigenMerma {
   PRODUCCION
   EMBOLSADO
@@ -232,10 +237,11 @@ model Destino {
 }
 
 model Salida {
-  id                String     @id @default(uuid())
-  fecha             DateTime   @db.Date
+  id                String       @id @default(uuid())
+  fecha             DateTime     @db.Date
   tipo              TipoSalida
-  destinoId         String?    @map("destino_id")
+  listaPrecios      ListaPrecios @default(UNIDAD) @map("lista_precios")
+  destinoId         String?      @map("destino_id")
   motivo            String?
   usuarioId         String     @map("usuario_id")
   claveIdempotencia String     @map("clave_idempotencia")
