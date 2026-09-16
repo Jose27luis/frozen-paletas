@@ -4,6 +4,7 @@ import '../datos/almacen_sesion.dart';
 import '../datos/cliente_api.dart';
 import '../datos/repositorio.dart';
 import '../dominio/modelos.dart';
+import 'modulos.dart';
 
 final Provider<AlmacenSesion> almacenProvider =
     Provider<AlmacenSesion>((Ref ref) => AlmacenSesion());
@@ -22,21 +23,44 @@ class SesionNotifier extends AsyncNotifier<Usuario?> {
   @override
   Future<Usuario?> build() => ref.watch(repositorioProvider).sesionGuardada();
 
-  Future<void> entrar(String correo, String password) async {
-    final Sesion sesion =
-        await ref.read(repositorioProvider).entrar(correo, password);
+  Future<void> entrar(
+    String correo,
+    String password, {
+    required bool recordar,
+  }) async {
+    final Sesion sesion = await ref
+        .read(repositorioProvider)
+        .entrar(correo, password, recordar: recordar);
+
+    ref.invalidate(credencialesProvider);
 
     state = AsyncValue<Usuario?>.data(sesion.usuario);
   }
 
   Future<void> salir() async {
     await ref.read(repositorioProvider).salir();
+    ref.read(moduloProvider.notifier).abrir(Modulo.panel);
     state = const AsyncValue<Usuario?>.data(null);
   }
 }
 
 final AsyncNotifierProvider<SesionNotifier, Usuario?> sesionProvider =
     AsyncNotifierProvider<SesionNotifier, Usuario?>(SesionNotifier.new);
+
+final FutureProvider<Credenciales?> credencialesProvider =
+    FutureProvider<Credenciales?>(
+  (Ref ref) => ref.watch(repositorioProvider).credencialesRecordadas(),
+);
+
+class ModuloNotifier extends Notifier<Modulo> {
+  @override
+  Modulo build() => Modulo.panel;
+
+  void abrir(Modulo modulo) => state = modulo;
+}
+
+final NotifierProvider<ModuloNotifier, Modulo> moduloProvider =
+    NotifierProvider<ModuloNotifier, Modulo>(ModuloNotifier.new);
 
 final FutureProvider<Panel> panelProvider =
     FutureProvider<Panel>((Ref ref) => ref.watch(repositorioProvider).panel());
