@@ -10,6 +10,7 @@ import { Prisma } from '../generated/prisma/client';
 import { TipoMovimiento, TipoSalida } from '../generated/prisma/enums';
 import { MovimientosService } from '../inventario/movimientos.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SaborDto } from '../sabores/dto/sabor.dto';
 import { SaboresService } from '../sabores/sabores.service';
 import { ListarSalidasDto } from './dto/listar-salidas.dto';
 import { LineaSalidaDto, RegistrarSalidaDto } from './dto/registrar-salida.dto';
@@ -20,6 +21,11 @@ const PEDIDO_MINIMO_DELIVERY = 12;
 const PRECIO_DELIVERY = new Prisma.Decimal('5.00');
 
 const TIPOS_CON_DESTINO_OBLIGATORIO: readonly TipoSalida[] = [
+  TipoSalida.PDV,
+  TipoSalida.MAYORISTA,
+];
+
+const CANALES_POR_MAYOR: readonly TipoSalida[] = [
   TipoSalida.PDV,
   TipoSalida.MAYORISTA,
 ];
@@ -93,6 +99,12 @@ function aDto(salida: SalidaSeleccionada): SalidaDto {
   };
 }
 
+function precioDelCatalogo(sabor: SaborDto, tipo: TipoSalida): string | null {
+  return CANALES_POR_MAYOR.includes(tipo)
+    ? sabor.precioMayor
+    : sabor.precioUnidad;
+}
+
 function precioDe(
   linea: LineaSalidaDto,
   tipo: TipoSalida,
@@ -147,7 +159,7 @@ export class SalidasService {
     for (const linea of datos.detalles) {
       const sabor = await this.saboresService.exigirSaborActivo(linea.saborId);
 
-      precios.set(linea.saborId, sabor.precio);
+      precios.set(linea.saborId, precioDelCatalogo(sabor, datos.tipo));
     }
 
     const fecha =
