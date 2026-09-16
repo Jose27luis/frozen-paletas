@@ -23,6 +23,27 @@ export interface FiltroMermas {
   limite?: number;
 }
 
+export interface MermaPorCausa {
+  causa: string;
+  cantidad: number;
+  registros: number;
+}
+
+export interface MermaPorSabor {
+  sabor: string;
+  cantidad: number;
+}
+
+export interface ResumenMermas {
+  desde: string;
+  hasta: string;
+  total: number;
+  enAlmacen: number;
+  enProceso: number;
+  porCausa: MermaPorCausa[];
+  porSabor: MermaPorSabor[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class MermasService {
   private readonly http = inject(HttpClient);
@@ -33,8 +54,30 @@ export class MermasService {
     );
   }
 
+  resumen(desde: string, hasta: string): Promise<ResumenMermas> {
+    return firstValueFrom(
+      this.http.get<ResumenMermas>('/api/mermas/resumen', {
+        params: aParametros({ desde, hasta }),
+      }),
+    );
+  }
+
   causas(): Promise<CausaMerma[]> {
     return firstValueFrom(this.http.get<CausaMerma[]>('/api/mermas/causas'));
+  }
+
+  crearCausa(nombre: string, requiereDescripcion: boolean): Promise<CausaMerma> {
+    return firstValueFrom(
+      this.http.post<CausaMerma>('/api/mermas/causas', { nombre, requiereDescripcion }),
+    );
+  }
+
+  desactivarCausa(id: string): Promise<CausaMerma> {
+    return firstValueFrom(this.http.delete<CausaMerma>(`/api/mermas/causas/${id}`));
+  }
+
+  activarCausa(id: string): Promise<CausaMerma> {
+    return firstValueFrom(this.http.post<CausaMerma>(`/api/mermas/causas/${id}/activar`, {}));
   }
 
   registrar(datos: DatosMerma): Promise<Merma> {
