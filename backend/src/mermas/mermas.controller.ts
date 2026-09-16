@@ -25,7 +25,9 @@ import { CausaMermaDto } from './dto/causa-merma.dto';
 import { CrearCausaMermaDto } from './dto/crear-causa-merma.dto';
 import { ListarMermasDto } from './dto/listar-mermas.dto';
 import { MermaDto } from './dto/merma.dto';
+import { RangoMermasDto } from './dto/rango-mermas.dto';
 import { RegistrarMermaDto } from './dto/registrar-merma.dto';
+import { ResumenMermasDto } from './dto/resumen-mermas.dto';
 import { MermasService } from './mermas.service';
 
 @ApiTags('Mermas')
@@ -57,6 +59,16 @@ export class MermasController {
   @ApiOkResponse({ type: [MermaDto] })
   listar(@Query() filtros: ListarMermasDto): Promise<MermaDto[]> {
     return this.mermasService.listar(filtros);
+  }
+
+  @Get('resumen')
+  @RequierePermiso(PERMISOS.CONSULTAR_INVENTARIO)
+  @ApiOperation({
+    summary: 'Resumir las mermas de un rango por causa, por sabor y por origen',
+  })
+  @ApiOkResponse({ type: ResumenMermasDto })
+  resumen(@Query() rango: RangoMermasDto): Promise<ResumenMermasDto> {
+    return this.mermasService.resumen(rango);
   }
 
   @Get('causas')
