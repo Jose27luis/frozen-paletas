@@ -16,3 +16,7 @@ AGENTS.md
 .vscode/
 
 /apk/
+.dart_tool/
+.pub-docker/
+.gradle-docker/
+movil/build/
