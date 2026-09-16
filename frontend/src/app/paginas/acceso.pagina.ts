@@ -50,18 +50,24 @@ const SUAVE = [0.16, 1, 0.3, 1] as const;
           class="w-full max-w-md rounded-[var(--radius-lamina)] border border-linea bg-superficie p-7 shadow-[0_28px_70px_-30px_rgb(20_49_79/0.45)] sm:p-9"
           (submit)="entrar($event)"
         >
-          <img
-            data-anima
-            src="fronzenlogo.png"
-            alt="Frozen Paletas"
-            width="486"
-            height="168"
-            class="h-14 w-auto"
-          />
+          <span #logo class="relative mx-auto block w-fit overflow-hidden">
+            <img
+              src="fronzenlogo.png"
+              alt="Frozen Paletas"
+              width="486"
+              height="168"
+              class="h-14 w-auto"
+            />
+            <span
+              #brillo
+              aria-hidden="true"
+              class="pointer-events-none absolute inset-y-0 left-0 w-10 -translate-x-full -skew-x-12 bg-gradient-to-r from-transparent via-superficie/85 to-transparent"
+            ></span>
+          </span>
 
           <span
             data-anima
-            class="mt-5 flex h-1 w-28 overflow-hidden rounded-full"
+            class="mx-auto mt-5 flex h-1 w-28 overflow-hidden rounded-full"
             aria-hidden="true"
           >
             <span class="flex-1 bg-helado"></span>
@@ -69,7 +75,7 @@ const SUAVE = [0.16, 1, 0.3, 1] as const;
             <span class="flex-1 bg-helado-hondo"></span>
           </span>
 
-          <div data-anima>
+          <div data-anima class="text-center">
             <h1 class="titulo pt-7 text-2xl">Entrar</h1>
             <p class="pt-1 text-sm text-tenue">Usa el correo con el que te dieron de alta.</p>
           </div>
@@ -109,6 +115,8 @@ export class AccesoPagina {
 
   private readonly foto = viewChild.required<ElementRef<HTMLImageElement>>('foto');
   private readonly tarjeta = viewChild.required<ElementRef<HTMLFormElement>>('tarjeta');
+  private readonly logo = viewChild.required<ElementRef<HTMLElement>>('logo');
+  private readonly brillo = viewChild.required<ElementRef<HTMLElement>>('brillo');
 
   protected readonly correo = signal('');
   protected readonly password = signal('');
@@ -160,9 +168,21 @@ export class AccesoPagina {
     );
 
     animate(
+      this.logo().nativeElement,
+      { opacity: [0, 1], transform: ['scale(0.86)', 'scale(1)'] },
+      { type: 'spring', stiffness: 220, damping: 14, delay: 0.12 },
+    );
+
+    animate(
+      this.brillo().nativeElement,
+      { transform: ['translateX(-100%) skewX(-12deg)', 'translateX(420%) skewX(-12deg)'] },
+      { duration: 0.85, delay: 0.55, ease: 'easeInOut' },
+    );
+
+    animate(
       this.tarjeta().nativeElement.querySelectorAll<HTMLElement>('[data-anima]'),
       { opacity: [0, 1], transform: ['translateY(12px)', 'translateY(0px)'] },
-      { duration: 0.45, delay: stagger(0.06, { startDelay: 0.14 }), ease: SUAVE },
+      { duration: 0.45, delay: stagger(0.06, { startDelay: 0.28 }), ease: SUAVE },
     );
   }
 
