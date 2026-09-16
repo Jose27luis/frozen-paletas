@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Post,
@@ -12,6 +14,7 @@ import {
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -90,8 +93,22 @@ export class MermasController {
 
   @Delete('causas/:id')
   @RequierePermiso(PERMISOS.ADMINISTRAR_SABORES)
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Desactivar una causa sin borrar las mermas que ya la usan',
+    summary: 'Eliminar una causa que todavía no se usó en ninguna merma',
+  })
+  @ApiNoContentResponse({ description: 'La causa quedó eliminada' })
+  @ApiConflictResponse({
+    description: 'La causa ya tiene mermas registradas: hay que desactivarla',
+  })
+  eliminarCausa(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    return this.causasService.eliminar(id);
+  }
+
+  @Post('causas/:id/desactivar')
+  @RequierePermiso(PERMISOS.ADMINISTRAR_SABORES)
+  @ApiOperation({
+    summary: 'Dejar de ofrecer una causa sin tocar las mermas que ya la usan',
   })
   @ApiOkResponse({ type: CausaMermaDto })
   desactivarCausa(
