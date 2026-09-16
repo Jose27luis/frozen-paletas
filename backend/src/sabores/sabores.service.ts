@@ -18,7 +18,8 @@ const SELECCION_SABOR = {
   categoria: true,
   estado: true,
   stockMinimo: true,
-  precio: true,
+  precioUnidad: true,
+  precioMayor: true,
   creadoEn: true,
 } satisfies Prisma.SaborSelect;
 
@@ -27,7 +28,11 @@ type SaborSeleccionado = Prisma.SaborGetPayload<{
 }>;
 
 function aDto(sabor: SaborSeleccionado): SaborDto {
-  return { ...sabor, precio: sabor.precio?.toFixed(2) ?? null };
+  return {
+    ...sabor,
+    precioUnidad: sabor.precioUnidad?.toFixed(2) ?? null,
+    precioMayor: sabor.precioMayor?.toFixed(2) ?? null,
+  };
 }
 
 @Injectable()
@@ -45,7 +50,8 @@ export class SaboresService {
         categoria: datos.categoria,
         estado: datos.estado ?? EstadoSabor.ACTIVO,
         stockMinimo: datos.stockMinimo,
-        precio: datos.precio,
+        precioUnidad: datos.precioUnidad,
+        precioMayor: datos.precioMayor,
       },
       select: SELECCION_SABOR,
     });
@@ -98,7 +104,8 @@ export class SaboresService {
         categoria: datos.categoria,
         estado: datos.estado,
         stockMinimo: datos.stockMinimo,
-        precio: datos.precio,
+        precioUnidad: datos.precioUnidad,
+        precioMayor: datos.precioMayor,
       },
       select: SELECCION_SABOR,
     });
