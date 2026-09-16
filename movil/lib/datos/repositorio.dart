@@ -54,12 +54,90 @@ class Repositorio {
         'No se pudo cargar el inventario',
       );
 
+  Future<Indicadores> indicadores(int dias) => _pedir(
+        () async => Indicadores.desdeJson(
+          await _api.objeto(
+            '/panel/indicadores',
+            parametros: <String, Object?>{'desde': _haceDias(dias)},
+          ),
+        ),
+        'No se pudieron calcular los indicadores',
+      );
+
   Future<List<Sabor>> sabores() => _pedir(
         () async => (await _api.lista('/sabores'))
             .map(Sabor.desdeJson)
             .where((Sabor sabor) => sabor.estado != 'INACTIVO')
             .toList(growable: false),
         'No se pudieron cargar los sabores',
+      );
+
+  Future<List<Sabor>> catalogo() => _pedir(
+        () async => (await _api.lista('/sabores'))
+            .map(Sabor.desdeJson)
+            .toList(growable: false),
+        'No se pudo cargar el catálogo de sabores',
+      );
+
+  Future<Sabor> crearSabor(Map<String, Object?> datos) => _pedir(
+        () async => Sabor.desdeJson(await _api.enviar('/sabores', datos)),
+        'No se pudo registrar el sabor',
+      );
+
+  Future<Sabor> actualizarSabor(String id, Map<String, Object?> datos) =>
+      _pedir(
+        () async =>
+            Sabor.desdeJson(await _api.actualizar('/sabores/$id', datos)),
+        'No se pudo actualizar el sabor',
+      );
+
+  Future<Sabor> desactivarSabor(String id) => _pedir(
+        () async => Sabor.desdeJson(await _api.borrar('/sabores/$id')),
+        'No se pudo retirar el sabor',
+      );
+
+  Future<Sabor> activarSabor(String id) => _pedir(
+        () async => Sabor.desdeJson(
+          await _api.enviar('/sabores/$id/activar', <String, Object?>{}),
+        ),
+        'No se pudo reactivar el sabor',
+      );
+
+  Future<List<UsuarioListado>> usuarios() => _pedir(
+        () async => (await _api.lista('/usuarios'))
+            .map(UsuarioListado.desdeJson)
+            .toList(growable: false),
+        'No se pudieron cargar los usuarios',
+      );
+
+  Future<UsuarioListado> crearUsuario(Map<String, Object?> datos) => _pedir(
+        () async =>
+            UsuarioListado.desdeJson(await _api.enviar('/usuarios', datos)),
+        'No se pudo dar de alta al usuario',
+      );
+
+  Future<UsuarioListado> actualizarUsuario(
+    String id,
+    Map<String, Object?> datos,
+  ) =>
+      _pedir(
+        () async => UsuarioListado.desdeJson(
+          await _api.actualizar('/usuarios/$id', datos),
+        ),
+        'No se pudo actualizar al usuario',
+      );
+
+  Future<UsuarioListado> desactivarUsuario(String id) => _pedir(
+        () async =>
+            UsuarioListado.desdeJson(await _api.borrar('/usuarios/$id')),
+        'No se pudo dar de baja al usuario',
+      );
+
+  Future<UsuarioListado> reactivarUsuario(String id) => _pedir(
+        () async => UsuarioListado.desdeJson(
+          await _api.enviar('/usuarios/$id/reactivar', <String, Object?>{}),
+        ),
+        'No se pudo reactivar al usuario',
       );
 
   Future<List<Produccion>> pendientesDeEmbolsar() => _pedir(
@@ -213,6 +291,21 @@ class Repositorio {
         'No hay ningún lote con ese código',
       );
 
+  Future<List<Lote>> lotes({String? saborId, required bool soloConStock}) =>
+      _pedir(
+        () async => (await _api.lista(
+          '/lotes',
+          parametros: <String, Object?>{
+            'saborId': ?saborId,
+            if (soloConStock) 'conStock': true,
+            'limite': 120,
+          },
+        ))
+            .map(Lote.desdeJson)
+            .toList(growable: false),
+        'No se pudieron cargar los lotes',
+      );
+
   Future<List<Lote>> lotesConStock(String saborId) => _pedir(
         () async => (await _api.lista(
           '/lotes',
@@ -226,6 +319,15 @@ class Repositorio {
             .toList(growable: false),
         'No se pudieron cargar los lotes',
       );
+
+  String _haceDias(int dias) {
+    final DateTime hoy = DateTime.now().toUtc().subtract(
+          const Duration(hours: 5),
+        );
+    final DateTime inicio = hoy.subtract(Duration(days: dias - 1));
+
+    return inicio.toIso8601String().substring(0, 10);
+  }
 
   Future<T> _pedir<T>(Future<T> Function() accion, String respaldo) async {
     try {
