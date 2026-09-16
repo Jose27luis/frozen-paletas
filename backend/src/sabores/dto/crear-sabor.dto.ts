@@ -3,9 +3,11 @@ import { Transform } from 'class-transformer';
 import {
   IsEnum,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
   Min,
   MinLength,
@@ -50,4 +52,14 @@ export class CrearSaborDto {
   @IsInt()
   @Min(0)
   stockMinimo?: number;
+
+  @ApiPropertyOptional({
+    example: 5,
+    description: 'Precio por paleta; se propone al registrar una salida',
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(1000)
+  precio?: number;
 }
