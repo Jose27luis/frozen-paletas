@@ -13,7 +13,8 @@ import { Campo } from '../ui/campo';
 import { CampoNumero } from '../ui/campo-numero';
 import { CampoSeleccion, Opcion } from '../ui/campo-seleccion';
 import { Cargador } from '../ui/cargador';
-import { Chip, TonoChip } from '../ui/chip';
+import { Chip } from '../ui/chip';
+import { TONO_DEL_SABOR } from '../nucleo/estados';
 import { Icono } from '../ui/icono';
 
 const DIAS_DE_CONTEXTO = 30;
@@ -25,12 +26,6 @@ const OPCIONES_CATEGORIA: readonly Opcion[] = (Object.keys(CATEGORIAS) as Catego
 const OPCIONES_ESTADO: readonly Opcion[] = (Object.keys(ESTADOS_SABOR) as EstadoSabor[]).map(
   (estado) => ({ valor: estado, texto: ESTADOS_SABOR[estado] }),
 );
-
-const TONOS: Readonly<Record<EstadoSabor, TonoChip>> = {
-  ACTIVO: 'hoja',
-  PROXIMO: 'helado',
-  INACTIVO: 'neutro',
-};
 
 @Component({
   selector: 'fz-sabores-pagina',
@@ -138,7 +133,7 @@ const TONOS: Readonly<Record<EstadoSabor, TonoChip>> = {
                       </span>
 
                       <span class="shrink-0">
-                        <fz-chip [tono]="TONOS[sabor.estado]">{{
+                        <fz-chip [tono]="TONO_DEL_SABOR[sabor.estado]">{{
                           ESTADOS_SABOR[sabor.estado]
                         }}</fz-chip>
                       </span>
@@ -248,7 +243,7 @@ export class SaboresPagina {
   protected readonly ESTADOS_SABOR = ESTADOS_SABOR;
   protected readonly OPCIONES_CATEGORIA = OPCIONES_CATEGORIA;
   protected readonly OPCIONES_ESTADO = OPCIONES_ESTADO;
-  protected readonly TONOS = TONOS;
+  protected readonly TONO_DEL_SABOR = TONO_DEL_SABOR;
   protected readonly DIAS_DE_CONTEXTO = DIAS_DE_CONTEXTO;
   protected readonly miles = miles;
   protected readonly soles = soles;
