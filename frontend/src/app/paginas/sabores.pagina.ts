@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { AvisosService } from '../nucleo/avisos.service';
 import { mensajeDe } from '../nucleo/errores';
 import { CATEGORIAS, ESTADOS_SABOR, PERMISOS } from '../nucleo/etiquetas';
-import { haceDias, hoyEnIso, miles } from '../nucleo/formato';
+import { haceDias, hoyEnIso, miles, soles } from '../nucleo/formato';
 import { Indicadores, IndicadorSabor } from '../nucleo/indicadores';
 import { CategoriaSabor, EstadoSabor, Sabor } from '../nucleo/modelos';
 import { PanelService } from '../nucleo/panel.service';
@@ -74,6 +74,12 @@ const TONOS: Readonly<Record<EstadoSabor, TonoChip>> = {
                 ayuda="Por debajo de este número pide reposición."
                 [(valor)]="stockMinimo"
               />
+              <fz-campo-numero
+                etiqueta="Precio por paleta"
+                ayuda="Se propone al registrar una salida. Admite decimales."
+                [paso]="0.01"
+                [(valor)]="precio"
+              />
             </div>
 
             <div class="pt-6">
@@ -104,6 +110,11 @@ const TONOS: Readonly<Record<EstadoSabor, TonoChip>> = {
                         </span>
                         <span class="flex flex-wrap items-baseline gap-x-3 pt-1 text-xs text-tenue">
                           <span>mínimo {{ sabor.stockMinimo }}</span>
+                          @if (sabor.precio !== null) {
+                            <span class="text-tinta">{{ soles(sabor.precio) }} por paleta</span>
+                          } @else {
+                            <span>sin precio</span>
+                          }
                           @if (contexto(sabor.id); as datos) {
                             <span>{{ datos.stock }} en stock</span>
                             <span>{{ datos.salido }} salieron en {{ DIAS_DE_CONTEXTO }} días</span>
@@ -156,6 +167,12 @@ const TONOS: Readonly<Record<EstadoSabor, TonoChip>> = {
                                 [ayuda]="sugerencia(sabor.id)"
                                 [(valor)]="editStockMinimo"
                               />
+                              <fz-campo-numero
+                                etiqueta="Precio por paleta"
+                                ayuda="Vacío para que no se proponga ninguno."
+                                [paso]="0.01"
+                                [(valor)]="editPrecio"
+                              />
                             </div>
 
                             <div class="flex flex-wrap gap-3 pt-5">
@@ -195,6 +212,7 @@ export class SaboresPagina {
   protected readonly categoria = signal('');
   protected readonly estado = signal<string>('ACTIVO');
   protected readonly stockMinimo = signal<number | null>(80);
+  protected readonly precio = signal<number | null>(null);
   protected readonly enviando = signal(false);
 
   protected readonly abierto = signal<string | null>(null);
@@ -203,6 +221,7 @@ export class SaboresPagina {
   protected readonly editCategoria = signal('');
   protected readonly editEstado = signal('');
   protected readonly editStockMinimo = signal<number | null>(null);
+  protected readonly editPrecio = signal<number | null>(null);
   protected readonly guardando = signal(false);
 
   protected readonly CATEGORIAS = CATEGORIAS;
@@ -212,6 +231,7 @@ export class SaboresPagina {
   protected readonly TONOS = TONOS;
   protected readonly DIAS_DE_CONTEXTO = DIAS_DE_CONTEXTO;
   protected readonly miles = miles;
+  protected readonly soles = soles;
 
   protected readonly puedeAdministrar = computed(() =>
     this.sesion.puede(PERMISOS.ADMINISTRAR_SABORES),
@@ -261,6 +281,7 @@ export class SaboresPagina {
     this.editCategoria.set(sabor.categoria);
     this.editEstado.set(sabor.estado);
     this.editStockMinimo.set(sabor.stockMinimo);
+    this.editPrecio.set(sabor.precio === null ? null : Number(sabor.precio));
   }
 
   protected async crear(evento: Event): Promise<void> {
@@ -280,6 +301,7 @@ export class SaboresPagina {
         categoria: this.categoria() as CategoriaSabor,
         estado: this.estado() as EstadoSabor,
         stockMinimo: this.stockMinimo() ?? undefined,
+        precio: this.precio() ?? undefined,
       });
 
       this.avisos.exito('Sabor añadido al catálogo.');
@@ -312,6 +334,7 @@ export class SaboresPagina {
         categoria: this.editCategoria() as CategoriaSabor,
         estado: this.editEstado() as EstadoSabor,
         stockMinimo: this.editStockMinimo() ?? undefined,
+        precio: this.editPrecio() ?? undefined,
       });
 
       this.avisos.exito(`${guardado.nombre} quedó actualizado.`);
