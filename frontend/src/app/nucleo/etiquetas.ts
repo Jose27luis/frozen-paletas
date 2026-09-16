@@ -4,6 +4,7 @@ import {
   EstadoProduccion,
   EstadoSabor,
   EstadoStock,
+  ListaPrecios,
   OrigenMerma,
   Rol,
   TipoMovimiento,
@@ -49,6 +50,11 @@ export const TIPOS_SALIDA: Readonly<Record<TipoSalida, string>> = {
   DELIVERY: 'Delivery',
   FERIA: 'Feria',
   OTRA: 'Otra salida',
+};
+
+export const LISTAS_PRECIOS: Readonly<Record<ListaPrecios, string>> = {
+  UNIDAD: 'Por unidad',
+  MAYOR: 'Por mayor',
 };
 
 export const TIPOS_MOVIMIENTO: Readonly<Record<TipoMovimiento, string>> = {
