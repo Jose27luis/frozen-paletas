@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { TipoSalida } from '../../generated/prisma/enums';
+import { ListaPrecios, TipoSalida } from '../../generated/prisma/enums';
 
 export class SalidaDetalleDto {
   @ApiProperty({ format: 'uuid' })
@@ -36,6 +36,13 @@ export class SalidaDto {
 
   @ApiProperty({ enum: TipoSalida, enumName: 'TipoSalida' })
   tipo: TipoSalida;
+
+  @ApiProperty({
+    enum: ListaPrecios,
+    enumName: 'ListaPrecios',
+    description: 'Lista con la que se cobró esta salida',
+  })
+  listaPrecios: ListaPrecios;
 
   @ApiProperty({ format: 'uuid', nullable: true })
   destinoId: string | null;
