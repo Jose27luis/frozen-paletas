@@ -3,14 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../dominio/modelos.dart';
 import '../nucleo/formato.dart';
+import '../nucleo/modulos.dart';
 import '../nucleo/proveedores.dart';
 import '../nucleo/tema.dart';
+import '../ui/menu_lateral.dart';
 import '../ui/piezas.dart';
 
 class PantallaPanel extends ConsumerWidget {
-  const PantallaPanel({required this.irA, super.key});
-
-  final void Function(int) irA;
+  const PantallaPanel({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -18,16 +18,8 @@ class PantallaPanel extends ConsumerWidget {
     final Usuario? usuario = ref.watch(sesionProvider).value;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Hola, ${usuario?.nombres ?? ''}'),
-        actions: <Widget>[
-          IconButton(
-            tooltip: 'Cerrar sesión',
-            icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(sesionProvider.notifier).salir(),
-          ),
-        ],
-      ),
+      drawer: const MenuLateral(),
+      appBar: AppBar(title: Text('Hola, ${usuario?.nombres ?? ''}')),
       body: panel.when(
         loading: () => const Cargando(),
         error: (Object error, StackTrace rastro) => Fallo(
@@ -62,7 +54,9 @@ class PantallaPanel extends ConsumerWidget {
                       tono: datos.aReponer.isEmpty
                           ? Paleta.tinta
                           : Paleta.aguajeVivo,
-                      alTocar: () => irA(1),
+                      alTocar: () => ref
+                          .read(moduloProvider.notifier)
+                          .abrir(Modulo.inventario),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -73,7 +67,9 @@ class PantallaPanel extends ConsumerWidget {
                       tono: datos.pendientesDeEmbolsar == 0
                           ? Paleta.tinta
                           : Paleta.aguajeVivo,
-                      alTocar: () => irA(2),
+                      alTocar: () => ref
+                          .read(moduloProvider.notifier)
+                          .abrir(Modulo.produccion),
                     ),
                   ),
                 ],
