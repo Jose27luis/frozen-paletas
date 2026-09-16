@@ -3,7 +3,7 @@ import { AvisosService } from '../nucleo/avisos.service';
 import { DestinosService } from '../nucleo/destinos.service';
 import { mensajeDe } from '../nucleo/errores';
 import { LISTAS_PRECIOS, PERMISOS, TIPOS_SALIDA } from '../nucleo/etiquetas';
-import { fechaCorta, hoyEnIso, miles, soles } from '../nucleo/formato';
+import { fechaCorta, fechaLarga, hoyEnIso, miles, soles } from '../nucleo/formato';
 import { InventarioService } from '../nucleo/inventario.service';
 import { LotesService } from '../nucleo/lotes.service';
 import {
@@ -12,6 +12,7 @@ import {
   Lote,
   Sabor,
   Salida,
+  SalidaDetalle,
   StockSabor,
   TipoSalida,
 } from '../nucleo/modelos';
@@ -24,6 +25,7 @@ import { CampoNumero } from '../ui/campo-numero';
 import { CampoSeleccion, Opcion } from '../ui/campo-seleccion';
 import { Cargador } from '../ui/cargador';
 import { Chip } from '../ui/chip';
+import { Modal } from '../ui/modal';
 
 interface Linea {
   saborId: string;
@@ -57,7 +59,7 @@ function lineaVacia(): Linea {
 
 @Component({
   selector: 'fz-salidas-pagina',
-  imports: [Boton, Campo, CampoNumero, CampoSeleccion, Cargador, Chip],
+  imports: [Boton, Campo, CampoNumero, CampoSeleccion, Cargador, Chip, Modal],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <h1 class="titulo text-2xl">Salidas</h1>
@@ -261,6 +263,7 @@ function lineaVacia(): Linea {
                   <th class="encabezado-tabla">Lotes</th>
                   <th class="encabezado-tabla text-right">Paletas</th>
                   <th class="encabezado-tabla text-right">Importe</th>
+                  <th class="encabezado-tabla"><span class="sr-only">Detalle</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -283,10 +286,19 @@ function lineaVacia(): Linea {
                     </td>
                     <td class="celda cifra text-right text-sm">{{ salida.cantidadTotal }}</td>
                     <td class="celda text-right text-sm text-tenue">{{ soles(salida.importe) }}</td>
+                    <td class="celda text-right">
+                      <button
+                        type="button"
+                        class="text-sm text-helado-hondo underline underline-offset-4 transition-colors hover:text-tinta"
+                        (click)="abrirDetalle(salida)"
+                      >
+                        Ver
+                      </button>
+                    </td>
                   </tr>
                 } @empty {
                   <tr>
-                    <td class="celda text-sm text-tenue" colspan="6">
+                    <td class="celda text-sm text-tenue" colspan="7">
                       No hay salidas con esos filtros.
                     </td>
                   </tr>
@@ -296,6 +308,84 @@ function lineaVacia(): Linea {
           </div>
         </div>
       </div>
+    }
+
+    @if (detalle(); as salida) {
+      <fz-modal
+        [titulo]="tituloDelDetalle(salida)"
+        [subtitulo]="subtituloDelDetalle(salida)"
+        (cerrado)="detalle.set(null)"
+      >
+        <dl class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <dt class="rotulo">Destino</dt>
+            <dd class="pt-0.5 text-sm">{{ salida.destino ?? 'Sin destino registrado' }}</dd>
+            @if (contactoDelDestino(salida); as contacto) {
+              <dd class="text-xs text-tenue">{{ contacto }}</dd>
+            }
+          </div>
+
+          <div>
+            <dt class="rotulo">Lista de precios</dt>
+            <dd class="pt-0.5 text-sm">{{ LISTAS_PRECIOS[salida.listaPrecios] }}</dd>
+          </div>
+
+          <div>
+            <dt class="rotulo">Quién lo registró</dt>
+            <dd class="pt-0.5 text-sm">{{ salida.usuario }}</dd>
+          </div>
+
+          <div>
+            <dt class="rotulo">Motivo</dt>
+            <dd class="pt-0.5 text-sm">{{ salida.motivo ?? 'Sin motivo anotado' }}</dd>
+          </div>
+        </dl>
+
+        <h3 class="titulo pt-7 text-sm">Qué salió</h3>
+        <p class="pb-2 text-xs text-tenue">
+          Una fila por lote: así queda registrado de qué producción salió cada paleta.
+        </p>
+
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[30rem]">
+            <thead>
+              <tr>
+                <th class="encabezado-tabla">Sabor</th>
+                <th class="encabezado-tabla">Lote</th>
+                <th class="encabezado-tabla text-right">Paletas</th>
+                <th class="encabezado-tabla text-right">Precio</th>
+                <th class="encabezado-tabla text-right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (linea of salida.detalles; track linea.loteId) {
+                <tr>
+                  <td class="celda text-sm">{{ linea.sabor }}</td>
+                  <td class="celda text-sm">
+                    <span class="cifra block">{{ linea.lote }}</span>
+                    @if (linea.loteManual) {
+                      <span class="text-xs text-tenue">elegido a mano</span>
+                    }
+                  </td>
+                  <td class="celda cifra text-right text-sm">{{ linea.cantidad }}</td>
+                  <td class="celda text-right text-sm text-tenue">
+                    {{ linea.precioUnitario === null ? '—' : soles(linea.precioUnitario) }}
+                  </td>
+                  <td class="celda cifra text-right text-sm">{{ subtotal(linea) }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="celda text-sm font-medium" colspan="2">Total</td>
+                <td class="celda cifra text-right text-sm">{{ salida.cantidadTotal }}</td>
+                <td class="celda"></td>
+                <td class="celda cifra text-right text-sm">{{ soles(salida.importe) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </fz-modal>
     }
   `,
 })
@@ -328,6 +418,8 @@ export class SalidasPagina {
   protected readonly destinoDireccion = signal('');
   protected readonly destinoTelefono = signal('');
   protected readonly creandoDestino = signal(false);
+
+  protected readonly detalle = signal<Salida | null>(null);
 
   protected readonly filtroTipo = signal('');
   protected readonly filtroDesde = signal('');
@@ -427,6 +519,40 @@ export class SalidasPagina {
 
   constructor() {
     void this.cargar();
+  }
+
+  protected abrirDetalle(salida: Salida): void {
+    this.detalle.set(salida);
+  }
+
+  protected tituloDelDetalle(salida: Salida): string {
+    return `${TIPOS_SALIDA[salida.tipo]} del ${fechaLarga(salida.fecha)}`;
+  }
+
+  protected subtituloDelDetalle(salida: Salida): string {
+    return `${salida.cantidadTotal} paletas por ${soles(salida.importe)}`;
+  }
+
+  protected contactoDelDestino(salida: Salida): string | null {
+    const destino = this.destinos().find((fila) => fila.id === salida.destinoId);
+
+    if (destino === undefined) {
+      return null;
+    }
+
+    const datos = [destino.direccion, destino.telefono].filter(
+      (dato): dato is string => dato !== null && dato !== '',
+    );
+
+    return datos.length === 0 ? null : datos.join(', ');
+  }
+
+  protected subtotal(linea: SalidaDetalle): string {
+    if (linea.precioUnitario === null) {
+      return '—';
+    }
+
+    return soles((Number(linea.precioUnitario) * linea.cantidad).toFixed(2));
   }
 
   protected disponible(linea: Linea): number {
