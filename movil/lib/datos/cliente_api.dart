@@ -56,6 +56,23 @@ class ClienteApi {
     return respuesta.data ?? <String, Object?>{};
   }
 
+  Future<Map<String, Object?>> actualizar(
+    String ruta,
+    Map<String, Object?> cuerpo,
+  ) async {
+    final Response<Map<String, Object?>> respuesta =
+        await _dio.patch<Map<String, Object?>>(ruta, data: cuerpo);
+
+    return respuesta.data ?? <String, Object?>{};
+  }
+
+  Future<Map<String, Object?>> borrar(String ruta) async {
+    final Response<Map<String, Object?>> respuesta =
+        await _dio.delete<Map<String, Object?>>(ruta);
+
+    return respuesta.data ?? <String, Object?>{};
+  }
+
   Map<String, Object?>? _limpiar(Map<String, Object?>? parametros) {
     if (parametros == null) {
       return null;
