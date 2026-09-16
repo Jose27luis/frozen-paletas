@@ -123,7 +123,8 @@ model Sabor {
   categoria     CategoriaSabor
   estado        EstadoSabor    @default(ACTIVO)
   stockMinimo   Int            @default(80) @map("stock_minimo")
-  precio        Decimal?       @db.Decimal(10, 2)
+  precioUnidad  Decimal?       @map("precio_unidad") @db.Decimal(10, 2)
+  precioMayor   Decimal?       @map("precio_mayor") @db.Decimal(10, 2)
   creadoEn      DateTime       @default(now()) @map("creado_en")
   actualizadoEn DateTime       @updatedAt @map("actualizado_en")
 
