@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 abstract final class Paleta {
-  static const Color fondo = Color(0xFFEEF3F7);
+  static const Color fondo = Color(0xFFDDF1F7);
+  static const Color celeste = Color(0xFFBFE6F1);
   static const Color superficie = Color(0xFFFFFFFF);
-  static const Color hundido = Color(0xFFE2EBF2);
-  static const Color linea = Color(0xFFCCDCE8);
+  static const Color hundido = Color(0xFFE2EDF2);
+  static const Color linea = Color(0xFFBFDCE6);
   static const Color tinta = Color(0xFF14314F);
   static const Color tenue = Color(0xFF5F7894);
   static const Color helado = Color(0xFF16B6C1);
@@ -66,12 +67,11 @@ abstract final class Tema {
           ),
         ),
       ),
-      navigationBarTheme: NavigationBarThemeData(
+      drawerTheme: const DrawerThemeData(
         backgroundColor: Paleta.superficie,
-        indicatorColor: Paleta.helado.withValues(alpha: 0.18),
-        elevation: 0,
-        labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(fontSize: 11, color: Paleta.tenue),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.horizontal(right: Radius.circular(24)),
         ),
       ),
       dividerTheme: const DividerThemeData(color: Paleta.linea, space: 1),
