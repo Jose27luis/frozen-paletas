@@ -11,7 +11,11 @@ class Repositorio {
   final ClienteApi _api;
   final AlmacenSesion _almacen;
 
-  Future<Sesion> entrar(String correo, String password) async {
+  Future<Sesion> entrar(
+    String correo,
+    String password, {
+    required bool recordar,
+  }) async {
     try {
       final Map<String, Object?> datos = await _api.enviar(
         '/auth/login',
@@ -22,6 +26,12 @@ class Repositorio {
 
       await _almacen.guardar(sesion);
 
+      if (recordar) {
+        await _almacen.recordar(correo, password);
+      } else {
+        await _almacen.olvidar();
+      }
+
       return sesion;
     } on DioException catch (error) {
       throw FalloApi.desde(error, 'No se pudo iniciar sesión');
@@ -29,6 +39,8 @@ class Repositorio {
   }
 
   Future<Usuario?> sesionGuardada() => _almacen.leerUsuario();
+
+  Future<Credenciales?> credencialesRecordadas() => _almacen.leerRecordadas();
 
   Future<void> salir() => _almacen.limpiar();
 
