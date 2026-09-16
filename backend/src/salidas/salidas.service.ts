@@ -7,7 +7,11 @@ import { aFecha, fechaDeHoy, rangoDeFechas } from '../common/fechas/fecha';
 import { UsuarioAutenticado } from '../common/tipos/usuario-autenticado';
 import { DestinosService } from '../destinos/destinos.service';
 import { Prisma } from '../generated/prisma/client';
-import { TipoMovimiento, TipoSalida } from '../generated/prisma/enums';
+import {
+  ListaPrecios,
+  TipoMovimiento,
+  TipoSalida,
+} from '../generated/prisma/enums';
 import { MovimientosService } from '../inventario/movimientos.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SaborDto } from '../sabores/dto/sabor.dto';
@@ -30,10 +34,17 @@ const CANALES_POR_MAYOR: readonly TipoSalida[] = [
   TipoSalida.MAYORISTA,
 ];
 
+function listaHabitualDe(tipo: TipoSalida): ListaPrecios {
+  return CANALES_POR_MAYOR.includes(tipo)
+    ? ListaPrecios.MAYOR
+    : ListaPrecios.UNIDAD;
+}
+
 const SELECCION_SALIDA = {
   id: true,
   fecha: true,
   tipo: true,
+  listaPrecios: true,
   destinoId: true,
   motivo: true,
   creadoEn: true,
@@ -85,6 +96,7 @@ function aDto(salida: SalidaSeleccionada): SalidaDto {
     id: salida.id,
     fecha: salida.fecha,
     tipo: salida.tipo,
+    listaPrecios: salida.listaPrecios,
     destinoId: salida.destinoId,
     destino: salida.destino?.nombre ?? null,
     motivo: salida.motivo,
@@ -99,10 +111,11 @@ function aDto(salida: SalidaSeleccionada): SalidaDto {
   };
 }
 
-function precioDelCatalogo(sabor: SaborDto, tipo: TipoSalida): string | null {
-  return CANALES_POR_MAYOR.includes(tipo)
-    ? sabor.precioMayor
-    : sabor.precioUnidad;
+function precioDelCatalogo(
+  sabor: SaborDto,
+  lista: ListaPrecios,
+): string | null {
+  return lista === ListaPrecios.MAYOR ? sabor.precioMayor : sabor.precioUnidad;
 }
 
 function precioDe(
@@ -154,12 +167,13 @@ export class SalidasService {
       );
     }
 
+    const lista = datos.listaPrecios ?? listaHabitualDe(datos.tipo);
     const precios = new Map<string, string | null>();
 
     for (const linea of datos.detalles) {
       const sabor = await this.saboresService.exigirSaborActivo(linea.saborId);
 
-      precios.set(linea.saborId, precioDelCatalogo(sabor, datos.tipo));
+      precios.set(linea.saborId, precioDelCatalogo(sabor, lista));
     }
 
     const fecha =
@@ -170,6 +184,7 @@ export class SalidasService {
         data: {
           fecha,
           tipo: datos.tipo,
+          listaPrecios: lista,
           destinoId: datos.destinoId,
           motivo: datos.motivo,
           usuarioId: actor.id,
