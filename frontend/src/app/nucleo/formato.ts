@@ -23,6 +23,18 @@ export function hoyEnIso(): string {
   return partes;
 }
 
+export function haceDias(dias: number): string {
+  const hoy = new Date(`${hoyEnIso()}T00:00:00.000Z`);
+
+  hoy.setUTCDate(hoy.getUTCDate() - (dias - 1));
+
+  return hoy.toISOString().slice(0, 10);
+}
+
+export function miles(cantidad: number): string {
+  return cantidad.toLocaleString('es-PE');
+}
+
 export function paletas(cantidad: number): string {
   return cantidad === 1 ? '1 paleta' : `${cantidad.toLocaleString('es-PE')} paletas`;
 }
