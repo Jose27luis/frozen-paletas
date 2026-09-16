@@ -98,18 +98,63 @@ class Sabor {
   const Sabor({
     required this.id,
     required this.nombre,
+    required this.abreviatura,
+    required this.categoria,
     required this.estado,
+    required this.stockMinimo,
+    required this.precioUnidad,
+    required this.precioMayor,
   });
 
   factory Sabor.desdeJson(Map<String, Object?> json) => Sabor(
         id: json['id']! as String,
         nombre: json['nombre']! as String,
+        abreviatura: json['abreviatura']! as String,
+        categoria: json['categoria']! as String,
         estado: json['estado']! as String,
+        stockMinimo: json['stockMinimo']! as int,
+        precioUnidad: json['precioUnidad'] as String?,
+        precioMayor: json['precioMayor'] as String?,
       );
 
   final String id;
   final String nombre;
+  final String abreviatura;
+  final String categoria;
   final String estado;
+  final int stockMinimo;
+  final String? precioUnidad;
+  final String? precioMayor;
+}
+
+class UsuarioListado {
+  const UsuarioListado({
+    required this.id,
+    required this.nombres,
+    required this.apellidos,
+    required this.correo,
+    required this.rol,
+    required this.activo,
+  });
+
+  factory UsuarioListado.desdeJson(Map<String, Object?> json) =>
+      UsuarioListado(
+        id: json['id']! as String,
+        nombres: json['nombres']! as String,
+        apellidos: json['apellidos']! as String,
+        correo: json['correo']! as String,
+        rol: json['rol']! as String,
+        activo: json['activo']! as bool,
+      );
+
+  final String id;
+  final String nombres;
+  final String apellidos;
+  final String correo;
+  final String rol;
+  final bool activo;
+
+  String get nombreCompleto => '$nombres $apellidos';
 }
 
 class Produccion {
@@ -313,11 +358,166 @@ class Panel {
   final List<Merma> mermasRecientes;
 }
 
+class ProduccionDelPeriodo {
+  const ProduccionDelPeriodo({
+    required this.obtenido,
+    required this.embolsado,
+    required this.merma,
+    required this.rendimiento,
+  });
+
+  factory ProduccionDelPeriodo.desdeJson(Map<String, Object?> json) =>
+      ProduccionDelPeriodo(
+        obtenido: json['obtenido']! as int,
+        embolsado: json['embolsado']! as int,
+        merma: json['merma']! as int,
+        rendimiento: json['rendimiento']! as String,
+      );
+
+  final int obtenido;
+  final int embolsado;
+  final int merma;
+  final String rendimiento;
+}
+
+class MermaDelPeriodo {
+  const MermaDelPeriodo({
+    required this.total,
+    required this.enAlmacen,
+    required this.enProceso,
+    required this.porcentaje,
+  });
+
+  factory MermaDelPeriodo.desdeJson(Map<String, Object?> json) =>
+      MermaDelPeriodo(
+        total: json['total']! as int,
+        enAlmacen: json['enAlmacen']! as int,
+        enProceso: json['enProceso']! as int,
+        porcentaje: json['porcentaje']! as String,
+      );
+
+  final int total;
+  final int enAlmacen;
+  final int enProceso;
+  final String porcentaje;
+}
+
+class StockActual {
+  const StockActual({required this.total, required this.cobertura});
+
+  factory StockActual.desdeJson(Map<String, Object?> json) => StockActual(
+        total: json['total']! as int,
+        cobertura: json['cobertura'] as int?,
+      );
+
+  final int total;
+  final int? cobertura;
+}
+
+class SalidaPorCanal {
+  const SalidaPorCanal({required this.tipo, required this.cantidad});
+
+  factory SalidaPorCanal.desdeJson(Map<String, Object?> json) => SalidaPorCanal(
+        tipo: json['tipo']! as String,
+        cantidad: json['cantidad']! as int,
+      );
+
+  final String tipo;
+  final int cantidad;
+}
+
+class IndicadorSabor {
+  const IndicadorSabor({
+    required this.saborId,
+    required this.nombre,
+    required this.abreviatura,
+    required this.stock,
+    required this.stockMinimo,
+    required this.estado,
+    required this.producido,
+    required this.salido,
+    required this.merma,
+    required this.cobertura,
+  });
+
+  factory IndicadorSabor.desdeJson(Map<String, Object?> json) => IndicadorSabor(
+        saborId: json['saborId']! as String,
+        nombre: json['nombre']! as String,
+        abreviatura: json['abreviatura']! as String,
+        stock: json['stock']! as int,
+        stockMinimo: json['stockMinimo']! as int,
+        estado: json['estado']! as String,
+        producido: json['producido']! as int,
+        salido: json['salido']! as int,
+        merma: json['merma']! as int,
+        cobertura: json['cobertura'] as int?,
+      );
+
+  final String saborId;
+  final String nombre;
+  final String abreviatura;
+  final int stock;
+  final int stockMinimo;
+  final String estado;
+  final int producido;
+  final int salido;
+  final int merma;
+  final int? cobertura;
+}
+
+class Indicadores {
+  const Indicadores({
+    required this.desde,
+    required this.hasta,
+    required this.dias,
+    required this.produccion,
+    required this.salidas,
+    required this.salidasPorCanal,
+    required this.mermas,
+    required this.stock,
+    required this.sabores,
+  });
+
+  factory Indicadores.desdeJson(Map<String, Object?> json) => Indicadores(
+        desde: json['desde']! as String,
+        hasta: json['hasta']! as String,
+        dias: json['dias']! as int,
+        produccion: ProduccionDelPeriodo.desdeJson(
+          json['produccion']! as Map<String, Object?>,
+        ),
+        salidas: json['salidas']! as int,
+        salidasPorCanal: (json['salidasPorCanal']! as List<Object?>)
+            .map((Object? fila) =>
+                SalidaPorCanal.desdeJson(fila! as Map<String, Object?>))
+            .toList(growable: false),
+        mermas: MermaDelPeriodo.desdeJson(
+          json['mermas']! as Map<String, Object?>,
+        ),
+        stock: StockActual.desdeJson(json['stock']! as Map<String, Object?>),
+        sabores: (json['sabores']! as List<Object?>)
+            .map((Object? fila) =>
+                IndicadorSabor.desdeJson(fila! as Map<String, Object?>))
+            .toList(growable: false),
+      );
+
+  final String desde;
+  final String hasta;
+  final int dias;
+  final ProduccionDelPeriodo produccion;
+  final int salidas;
+  final List<SalidaPorCanal> salidasPorCanal;
+  final MermaDelPeriodo mermas;
+  final StockActual stock;
+  final List<IndicadorSabor> sabores;
+}
+
 abstract final class Permisos {
   static const String consultarInventario = 'inventario.consultar';
   static const String registrarProduccion = 'produccion.registrar';
   static const String registrarMermas = 'mermas.registrar';
   static const String registrarSalidas = 'salidas.registrar';
+  static const String administrarSabores = 'sabores.administrar';
+  static const String administrarUsuarios = 'usuarios.administrar';
 }
 
 abstract final class Etiquetas {
@@ -357,5 +557,25 @@ abstract final class Etiquetas {
     'PRODUCCION': 'En producción',
     'EMBOLSADO': 'En embolsado',
     'STOCK': 'En almacén',
+  };
+
+  static const Map<String, String> categoriaSabor = <String, String>{
+    'CON_RELLENO': 'Con relleno',
+    'AMAZONICO': 'Amazónico',
+    'FRUTAL': 'Frutal',
+    'CREMOSO': 'Cremoso',
+    'BEBIDA': 'Bebida',
+  };
+
+  static const Map<String, String> estadoSabor = <String, String>{
+    'ACTIVO': 'En producción',
+    'INACTIVO': 'Retirado',
+  };
+
+  static const Map<String, String> rol = <String, String>{
+    'ADMIN': 'Administrador',
+    'OPERACIONES': 'Operaciones',
+    'PRODUCCION': 'Producción',
+    'CONSULTA': 'Consulta',
   };
 }
