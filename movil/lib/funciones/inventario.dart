@@ -6,6 +6,7 @@ import '../dominio/modelos.dart';
 import '../nucleo/formato.dart';
 import '../nucleo/proveedores.dart';
 import '../nucleo/tema.dart';
+import '../ui/menu_lateral.dart';
 import '../ui/piezas.dart';
 
 class PantallaInventario extends ConsumerWidget {
@@ -16,6 +17,7 @@ class PantallaInventario extends ConsumerWidget {
     final AsyncValue<Inventario> inventario = ref.watch(inventarioProvider);
 
     return Scaffold(
+      drawer: const MenuLateral(),
       appBar: AppBar(
         title: const Text('Inventario'),
         actions: <Widget>[
