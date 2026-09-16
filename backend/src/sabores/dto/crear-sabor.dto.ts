@@ -55,11 +55,21 @@ export class CrearSaborDto {
 
   @ApiPropertyOptional({
     example: 5,
-    description: 'Precio por paleta; se propone al registrar una salida',
+    description: 'Precio de venta al público, por paleta suelta',
   })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   @Max(1000)
-  precio?: number;
+  precioUnidad?: number;
+
+  @ApiPropertyOptional({
+    example: 3.2,
+    description: 'Precio por mayor, para puntos de venta y mayoristas',
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(1000)
+  precioMayor?: number;
 }
