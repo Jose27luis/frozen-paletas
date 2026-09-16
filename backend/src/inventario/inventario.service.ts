@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { rangoDeFechas } from '../common/fechas/fecha';
+import { fechaDeHoy, rangoDeFechas } from '../common/fechas/fecha';
 import { Prisma } from '../generated/prisma/client';
 import { EstadoSabor } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
@@ -9,6 +9,7 @@ import { InventarioDto, StockSaborDto } from './dto/stock-sabor.dto';
 import { estadoDelStock, EstadoStock } from './estado-stock';
 
 const LIMITE_POR_DEFECTO = 100;
+const MILISEGUNDOS_POR_DIA = 24 * 60 * 60 * 1000;
 
 const SELECCION_MOVIMIENTO = {
   id: true,
@@ -62,7 +63,7 @@ export class InventarioService {
   }
 
   async stockPorSabor(): Promise<StockSaborDto[]> {
-    const [sabores, sumas] = await Promise.all([
+    const [sabores, sumas, lotes] = await Promise.all([
       this.prisma.sabor.findMany({
         where: { estado: { not: EstadoSabor.INACTIVO } },
         orderBy: [{ categoria: 'asc' }, { nombre: 'asc' }],
@@ -79,14 +80,28 @@ export class InventarioService {
         by: ['saborId'],
         _sum: { cantidad: true },
       }),
+      this.prisma.lote.findMany({
+        where: { stockRestante: { gt: 0 } },
+        orderBy: [{ fechaProduccion: 'asc' }, { correlativo: 'asc' }],
+        select: {
+          saborId: true,
+          codigo: true,
+          fechaProduccion: true,
+          stockRestante: true,
+        },
+      }),
     ]);
 
     const porSabor = new Map(
       sumas.map((suma) => [suma.saborId, suma._sum.cantidad ?? 0]),
     );
 
+    const hoy = fechaDeHoy().getTime();
+
     return sabores.map((sabor) => {
       const stock = porSabor.get(sabor.id) ?? 0;
+      const abiertos = lotes.filter((lote) => lote.saborId === sabor.id);
+      const [antiguo] = abiertos;
 
       return {
         saborId: sabor.id,
@@ -97,6 +112,22 @@ export class InventarioService {
         stock,
         stockMinimo: sabor.stockMinimo,
         estado: estadoDelStock(stock, sabor.stockMinimo),
+        lotesAbiertos: abiertos.length,
+        loteMasAntiguo:
+          antiguo === undefined
+            ? null
+            : {
+                codigo: antiguo.codigo,
+                fecha: antiguo.fechaProduccion,
+                stockRestante: antiguo.stockRestante,
+                antiguedad: Math.max(
+                  0,
+                  Math.round(
+                    (hoy - antiguo.fechaProduccion.getTime()) /
+                      MILISEGUNDOS_POR_DIA,
+                  ),
+                ),
+              },
       };
     });
   }
