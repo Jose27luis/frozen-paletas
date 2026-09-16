@@ -101,12 +101,75 @@ final FutureProvider<List<Merma>> mermasProvider = FutureProvider<List<Merma>>(
   (Ref ref) => ref.watch(repositorioProvider).mermas(),
 );
 
+class RangoNotifier extends Notifier<int> {
+  @override
+  int build() => 30;
+
+  void cambiar(int dias) => state = dias;
+}
+
+final NotifierProvider<RangoNotifier, int> rangoProvider =
+    NotifierProvider<RangoNotifier, int>(RangoNotifier.new);
+
+final FutureProvider<Indicadores> indicadoresProvider =
+    FutureProvider<Indicadores>(
+  (Ref ref) =>
+      ref.watch(repositorioProvider).indicadores(ref.watch(rangoProvider)),
+);
+
+class FiltroLotes {
+  const FiltroLotes({this.saborId, this.soloConStock = true});
+
+  final String? saborId;
+  final bool soloConStock;
+
+  FiltroLotes conSabor(String? id) =>
+      FiltroLotes(saborId: id, soloConStock: soloConStock);
+
+  FiltroLotes conStock(bool solo) =>
+      FiltroLotes(saborId: saborId, soloConStock: solo);
+}
+
+class FiltroLotesNotifier extends Notifier<FiltroLotes> {
+  @override
+  FiltroLotes build() => const FiltroLotes();
+
+  void porSabor(String? saborId) => state = state.conSabor(saborId);
+
+  void soloConStock(bool solo) => state = state.conStock(solo);
+}
+
+final NotifierProvider<FiltroLotesNotifier, FiltroLotes> filtroLotesProvider =
+    NotifierProvider<FiltroLotesNotifier, FiltroLotes>(FiltroLotesNotifier.new);
+
+final FutureProvider<List<Lote>> lotesProvider = FutureProvider<List<Lote>>(
+  (Ref ref) {
+    final FiltroLotes filtro = ref.watch(filtroLotesProvider);
+
+    return ref.watch(repositorioProvider).lotes(
+          saborId: filtro.saborId,
+          soloConStock: filtro.soloConStock,
+        );
+  },
+);
+
+final FutureProvider<List<Sabor>> catalogoProvider = FutureProvider<List<Sabor>>(
+  (Ref ref) => ref.watch(repositorioProvider).catalogo(),
+);
+
+final FutureProvider<List<UsuarioListado>> usuariosProvider =
+    FutureProvider<List<UsuarioListado>>(
+  (Ref ref) => ref.watch(repositorioProvider).usuarios(),
+);
+
 void refrescarTodo(WidgetRef ref) {
   ref
     ..invalidate(panelProvider)
+    ..invalidate(indicadoresProvider)
     ..invalidate(inventarioProvider)
     ..invalidate(pendientesProvider)
     ..invalidate(produccionesProvider)
     ..invalidate(salidasProvider)
-    ..invalidate(mermasProvider);
+    ..invalidate(mermasProvider)
+    ..invalidate(lotesProvider);
 }
