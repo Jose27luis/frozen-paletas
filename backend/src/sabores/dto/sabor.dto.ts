@@ -23,9 +23,16 @@ export class SaborDto {
   @ApiProperty({
     example: '5.00',
     nullable: true,
-    description: 'Precio por paleta que se propone al registrar una salida',
+    description: 'Precio de venta al público, por paleta suelta',
   })
-  precio: string | null;
+  precioUnidad: string | null;
+
+  @ApiProperty({
+    example: '3.20',
+    nullable: true,
+    description: 'Precio por mayor, para puntos de venta y mayoristas',
+  })
+  precioMayor: string | null;
 
   @ApiProperty({ type: String, format: 'date-time' })
   creadoEn: Date;
