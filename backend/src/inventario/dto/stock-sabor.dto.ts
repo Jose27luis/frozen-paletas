@@ -2,6 +2,20 @@ import { ApiProperty } from '@nestjs/swagger';
 import { CategoriaSabor, EstadoSabor } from '../../generated/prisma/enums';
 import { EstadoStock } from '../estado-stock';
 
+export class LoteMasAntiguoDto {
+  @ApiProperty({ example: 'COC-140926-01' })
+  codigo: string;
+
+  @ApiProperty({ type: String, format: 'date' })
+  fecha: Date;
+
+  @ApiProperty({ example: 40, description: 'Paletas que quedan de ese lote' })
+  stockRestante: number;
+
+  @ApiProperty({ example: 12, description: 'Días desde que se produjo' })
+  antiguedad: number;
+}
+
 export class StockSaborDto {
   @ApiProperty({ format: 'uuid' })
   saborId: string;
@@ -26,6 +40,16 @@ export class StockSaborDto {
 
   @ApiProperty({ enum: EstadoStock, enumName: 'EstadoStock' })
   estado: EstadoStock;
+
+  @ApiProperty({ example: 3, description: 'Lotes que todavía tienen paletas' })
+  lotesAbiertos: number;
+
+  @ApiProperty({
+    type: LoteMasAntiguoDto,
+    nullable: true,
+    description: 'El lote que se despacha primero por PEPS',
+  })
+  loteMasAntiguo: LoteMasAntiguoDto | null;
 }
 
 export class InventarioDto {
