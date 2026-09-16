@@ -73,7 +73,11 @@ export class MermasService {
   }
 
   desactivarCausa(id: string): Promise<CausaMerma> {
-    return firstValueFrom(this.http.delete<CausaMerma>(`/api/mermas/causas/${id}`));
+    return firstValueFrom(this.http.post<CausaMerma>(`/api/mermas/causas/${id}/desactivar`, {}));
+  }
+
+  eliminarCausa(id: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`/api/mermas/causas/${id}`));
   }
 
   activarCausa(id: string): Promise<CausaMerma> {
