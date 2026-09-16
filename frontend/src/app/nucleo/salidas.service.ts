@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { Salida, TipoSalida } from './modelos';
+import { ListaPrecios, Salida, TipoSalida } from './modelos';
 import { aParametros } from './parametros';
 
 export interface LineaSalida {
@@ -13,6 +13,7 @@ export interface LineaSalida {
 
 export interface DatosSalida {
   tipo: TipoSalida;
+  listaPrecios: ListaPrecios;
   detalles: LineaSalida[];
   claveIdempotencia: string;
   fecha?: string;
