@@ -24,7 +24,8 @@ if [ -z "$VERSION" ]; then
 fi
 
 echo "==> Mandando el parche sobre $VERSION"
-correr_shorebird patch android --release-version "$VERSION" "${EXTRAS[@]}"
+correr_shorebird patch android --release-version "$VERSION" "${EXTRAS[@]}" \
+  -- --no-tree-shake-icons
 
 cat <<'NOTA'
 
