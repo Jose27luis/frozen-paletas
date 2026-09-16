@@ -14,7 +14,22 @@ const SELECCION_CAUSA = {
   nombre: true,
   requiereDescripcion: true,
   activa: true,
+  _count: { select: { mermas: true } },
 } satisfies Prisma.CausaMermaSelect;
+
+type CausaSeleccionada = Prisma.CausaMermaGetPayload<{
+  select: typeof SELECCION_CAUSA;
+}>;
+
+function aDto(causa: CausaSeleccionada): CausaMermaDto {
+  return {
+    id: causa.id,
+    nombre: causa.nombre,
+    requiereDescripcion: causa.requiereDescripcion,
+    activa: causa.activa,
+    usos: causa._count.mermas,
+  };
+}
 
 @Injectable()
 export class CausasService {
@@ -30,30 +45,48 @@ export class CausasService {
       throw new ConflictException('Ya hay una causa con ese nombre');
     }
 
-    return this.prisma.causaMerma.create({
+    const creada = await this.prisma.causaMerma.create({
       data: {
         nombre: datos.nombre,
         requiereDescripcion: datos.requiereDescripcion ?? false,
       },
       select: SELECCION_CAUSA,
     });
+
+    return aDto(creada);
   }
 
-  listar(): Promise<CausaMermaDto[]> {
-    return this.prisma.causaMerma.findMany({
+  async listar(): Promise<CausaMermaDto[]> {
+    const causas = await this.prisma.causaMerma.findMany({
       orderBy: [{ activa: 'desc' }, { nombre: 'asc' }],
       select: SELECCION_CAUSA,
     });
+
+    return causas.map(aDto);
   }
 
   async cambiarEstado(id: string, activa: boolean): Promise<CausaMermaDto> {
     await this.exigirCausa(id);
 
-    return this.prisma.causaMerma.update({
+    const actualizada = await this.prisma.causaMerma.update({
       where: { id },
       data: { activa },
       select: SELECCION_CAUSA,
     });
+
+    return aDto(actualizada);
+  }
+
+  async eliminar(id: string): Promise<void> {
+    const causa = await this.exigirCausa(id);
+
+    if (causa.usos > 0) {
+      throw new ConflictException(
+        `${causa.nombre} tiene ${causa.usos} mermas registradas: desactívala en vez de borrarla, o el histórico perdería el motivo`,
+      );
+    }
+
+    await this.prisma.causaMerma.delete({ where: { id } });
   }
 
   async exigirCausaUsable(
@@ -88,6 +121,6 @@ export class CausasService {
       throw new NotFoundException('La causa de merma no existe');
     }
 
-    return causa;
+    return aDto(causa);
   }
 }
