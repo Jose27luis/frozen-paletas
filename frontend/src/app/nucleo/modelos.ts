@@ -14,6 +14,8 @@ export type TipoMovimiento = 'INGRESO_PRODUCCION' | 'SALIDA' | 'MERMA' | 'AJUSTE
 
 export type TipoSalida = 'PDV' | 'MAYORISTA' | 'DELIVERY' | 'FERIA' | 'OTRA';
 
+export type ListaPrecios = 'UNIDAD' | 'MAYOR';
+
 export type OrigenMerma = 'PRODUCCION' | 'EMBOLSADO' | 'STOCK';
 
 export interface UsuarioSesion {
@@ -149,6 +151,7 @@ export interface Salida {
   id: string;
   fecha: string;
   tipo: TipoSalida;
+  listaPrecios: ListaPrecios;
   destinoId: string | null;
   destino: string | null;
   motivo: string | null;
