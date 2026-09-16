@@ -4,17 +4,17 @@
 @import '@fontsource-variable/instrument-sans/wght.css';
 
 @theme {
-  --color-fondo: #ebf2f1;
+  --color-fondo: #eef3f7;
   --color-superficie: #ffffff;
-  --color-hundido: #e1ebe9;
-  --color-linea: #cfdfdc;
-  --color-tinta: #0d2f36;
-  --color-tenue: #587880;
-  --color-helado: #0e8f8f;
-  --color-helado-hondo: #0a6e6e;
+  --color-hundido: #e2ebf2;
+  --color-linea: #ccdce8;
+  --color-tinta: #14314f;
+  --color-tenue: #5f7894;
+  --color-helado: #16b6c1;
+  --color-helado-hondo: #1b4e82;
   --color-hoja: #2e7d57;
   --color-aguaje: #c4661a;
-  --color-granate: #a2322b;
+  --color-granate: #cc1b32;
 
   --font-display: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
   --font-sans: 'Instrument Sans Variable', ui-sans-serif, system-ui, sans-serif;
@@ -41,6 +41,11 @@
   :focus-visible {
     outline: 2px solid var(--color-helado);
     outline-offset: 2px;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
   }
 
   table {
