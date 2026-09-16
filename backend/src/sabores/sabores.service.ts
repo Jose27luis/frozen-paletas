@@ -18,8 +18,17 @@ const SELECCION_SABOR = {
   categoria: true,
   estado: true,
   stockMinimo: true,
+  precio: true,
   creadoEn: true,
 } satisfies Prisma.SaborSelect;
+
+type SaborSeleccionado = Prisma.SaborGetPayload<{
+  select: typeof SELECCION_SABOR;
+}>;
+
+function aDto(sabor: SaborSeleccionado): SaborDto {
+  return { ...sabor, precio: sabor.precio?.toFixed(2) ?? null };
+}
 
 @Injectable()
 export class SaboresService {
@@ -29,24 +38,29 @@ export class SaboresService {
     await this.exigirNombreLibre(datos.nombre);
     await this.exigirAbreviaturaLibre(datos.abreviatura);
 
-    return this.prisma.sabor.create({
+    const creado = await this.prisma.sabor.create({
       data: {
         nombre: datos.nombre,
         abreviatura: datos.abreviatura,
         categoria: datos.categoria,
         estado: datos.estado ?? EstadoSabor.ACTIVO,
         stockMinimo: datos.stockMinimo,
+        precio: datos.precio,
       },
       select: SELECCION_SABOR,
     });
+
+    return aDto(creado);
   }
 
-  listar(filtros: ListarSaboresDto): Promise<SaborDto[]> {
-    return this.prisma.sabor.findMany({
+  async listar(filtros: ListarSaboresDto): Promise<SaborDto[]> {
+    const sabores = await this.prisma.sabor.findMany({
       where: { estado: filtros.estado, categoria: filtros.categoria },
       orderBy: [{ categoria: 'asc' }, { nombre: 'asc' }],
       select: SELECCION_SABOR,
     });
+
+    return sabores.map(aDto);
   }
 
   async obtener(id: string): Promise<SaborDto> {
@@ -59,7 +73,7 @@ export class SaboresService {
       throw new NotFoundException('El sabor no existe');
     }
 
-    return sabor;
+    return aDto(sabor);
   }
 
   async actualizar(id: string, datos: ActualizarSaborDto): Promise<SaborDto> {
@@ -76,7 +90,7 @@ export class SaboresService {
       await this.exigirAbreviaturaLibre(datos.abreviatura);
     }
 
-    return this.prisma.sabor.update({
+    const actualizado = await this.prisma.sabor.update({
       where: { id },
       data: {
         nombre: datos.nombre,
@@ -84,19 +98,24 @@ export class SaboresService {
         categoria: datos.categoria,
         estado: datos.estado,
         stockMinimo: datos.stockMinimo,
+        precio: datos.precio,
       },
       select: SELECCION_SABOR,
     });
+
+    return aDto(actualizado);
   }
 
   async cambiarEstado(id: string, estado: EstadoSabor): Promise<SaborDto> {
     await this.obtener(id);
 
-    return this.prisma.sabor.update({
+    const actualizado = await this.prisma.sabor.update({
       where: { id },
       data: { estado },
       select: SELECCION_SABOR,
     });
+
+    return aDto(actualizado);
   }
 
   async exigirSaborActivo(id: string): Promise<SaborDto> {
