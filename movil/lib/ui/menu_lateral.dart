@@ -28,14 +28,15 @@ class MenuLateral extends ConsumerWidget {
               ),
               children: <Widget>[
                 for (final Modulo modulo in Modulo.values)
-                  _Enlace(
-                    modulo: modulo,
-                    activo: modulo == actual,
-                    alTocar: () {
-                      ref.read(moduloProvider.notifier).abrir(modulo);
-                      Navigator.of(context).pop();
-                    },
-                  ),
+                  if (modulo.visiblePara(usuario))
+                    _Enlace(
+                      modulo: modulo,
+                      activo: modulo == actual,
+                      alTocar: () {
+                        ref.read(moduloProvider.notifier).abrir(modulo);
+                        Navigator.of(context).pop();
+                      },
+                    ),
               ],
             ),
           ),
@@ -129,7 +130,7 @@ class _Cabecera extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  usuario?.rol ?? '',
+                  Etiquetas.rol[usuario?.rol] ?? '',
                   style: const TextStyle(
                     color: Paleta.superficie,
                     fontSize: 11,
