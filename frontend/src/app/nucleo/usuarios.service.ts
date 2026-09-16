@@ -23,6 +23,10 @@ export class UsuariosService {
     return firstValueFrom(this.http.post<Usuario>('/api/usuarios', datos));
   }
 
+  actualizar(id: string, datos: Partial<DatosUsuario>): Promise<Usuario> {
+    return firstValueFrom(this.http.patch<Usuario>(`/api/usuarios/${id}`, datos));
+  }
+
   desactivar(id: string): Promise<Usuario> {
     return firstValueFrom(this.http.delete<Usuario>(`/api/usuarios/${id}`));
   }
