@@ -6,7 +6,8 @@ import { PERMISOS, TIPOS_SALIDA } from '../nucleo/etiquetas';
 import { fechaCorta, hoyEnIso, miles, soles } from '../nucleo/formato';
 import { InventarioService } from '../nucleo/inventario.service';
 import { LotesService } from '../nucleo/lotes.service';
-import { Destino, Lote, Salida, StockSabor, TipoSalida } from '../nucleo/modelos';
+import { Destino, Lote, Sabor, Salida, StockSabor, TipoSalida } from '../nucleo/modelos';
+import { SaboresService } from '../nucleo/sabores.service';
 import { SalidasService } from '../nucleo/salidas.service';
 import { SesionService } from '../nucleo/sesion.service';
 import { Boton } from '../ui/boton';
@@ -20,6 +21,7 @@ interface Linea {
   saborId: string;
   cantidad: number | null;
   loteId: string;
+  precio: number | null;
 }
 
 const TIPOS_CON_DESTINO: readonly TipoSalida[] = ['PDV', 'MAYORISTA', 'DELIVERY', 'FERIA'];
@@ -32,7 +34,7 @@ const OPCIONES_TIPO: readonly Opcion[] = (Object.keys(TIPOS_SALIDA) as TipoSalid
 );
 
 function lineaVacia(): Linea {
-  return { saborId: '', cantidad: null, loteId: '' };
+  return { saborId: '', cantidad: null, loteId: '', precio: null };
 }
 
 @Component({
@@ -105,15 +107,7 @@ function lineaVacia(): Linea {
                 />
               }
 
-              <div class="grid gap-4 sm:grid-cols-2">
-                <fz-campo etiqueta="Fecha" tipo="date" [(valor)]="fecha" />
-                <fz-campo-numero
-                  etiqueta="Precio por paleta"
-                  ayuda="Admite decimales, por ejemplo 3.20. Vacío si no se cobra."
-                  [paso]="0.01"
-                  [(valor)]="precio"
-                />
-              </div>
+              <fz-campo etiqueta="Fecha" tipo="date" [(valor)]="fecha" />
             </div>
 
             <h3 class="titulo pt-7 text-sm">Detalle</h3>
@@ -141,6 +135,14 @@ function lineaVacia(): Linea {
                       Solo quedan {{ disponible(linea) }} paletas de ese sabor.
                     </p>
                   }
+
+                  <fz-campo-numero
+                    etiqueta="Precio por paleta"
+                    [ayuda]="ayudaDePrecio(linea)"
+                    [paso]="0.01"
+                    [valor]="linea.precio"
+                    (valorChange)="cambiarPrecio($index, $event)"
+                  />
 
                   <fz-campo-seleccion
                     etiqueta="Lote"
@@ -273,6 +275,7 @@ export class SalidasPagina {
   private readonly inventarioService = inject(InventarioService);
   private readonly destinosService = inject(DestinosService);
   private readonly lotesService = inject(LotesService);
+  private readonly saboresService = inject(SaboresService);
   private readonly avisos = inject(AvisosService);
   private readonly sesion = inject(SesionService);
 
@@ -286,7 +289,7 @@ export class SalidasPagina {
   protected readonly destinoId = signal('');
   protected readonly motivo = signal('');
   protected readonly fecha = signal(hoyEnIso());
-  protected readonly precio = signal<number | null>(null);
+  protected readonly sabores = signal<Sabor[]>([]);
   protected readonly lineas = signal<Linea[]>([lineaVacia()]);
   protected readonly enviando = signal(false);
 
@@ -333,11 +336,9 @@ export class SalidasPagina {
     this.lineas().reduce((suma, linea) => suma + (linea.cantidad ?? 0), 0),
   );
 
-  protected readonly importe = computed(() => {
-    const precio = this.precio() ?? (this.tipo() === 'DELIVERY' ? PRECIO_DELIVERY : 0);
-
-    return this.totalPaletas() * precio;
-  });
+  protected readonly importe = computed(() =>
+    this.lineas().reduce((suma, linea) => suma + (linea.cantidad ?? 0) * (linea.precio ?? 0), 0),
+  );
 
   protected readonly reglaDelTipo = computed(() => {
     if (this.tipo() === 'DELIVERY') {
@@ -432,7 +433,41 @@ export class SalidasPagina {
   }
 
   protected cambiarSabor(indice: number, valor: string): void {
-    this.actualizarLinea(indice, { saborId: valor, loteId: '' });
+    this.actualizarLinea(indice, {
+      saborId: valor,
+      loteId: '',
+      precio: this.precioSugerido(valor),
+    });
+  }
+
+  protected cambiarPrecio(indice: number, valor: number | null): void {
+    this.actualizarLinea(indice, { precio: valor });
+  }
+
+  protected ayudaDePrecio(linea: Linea): string {
+    if (linea.saborId === '') {
+      return 'Elige primero el sabor.';
+    }
+
+    const sabor = this.sabores().find((fila) => fila.id === linea.saborId);
+
+    if (sabor?.precio != null) {
+      return `El sabor tiene ${soles(sabor.precio)} de precio.`;
+    }
+
+    return this.tipo() === 'DELIVERY'
+      ? `Sin precio propio; el delivery usa S/ ${PRECIO_DELIVERY}.00.`
+      : 'Este sabor no tiene precio puesto en el catálogo.';
+  }
+
+  private precioSugerido(saborId: string): number | null {
+    const sabor = this.sabores().find((fila) => fila.id === saborId);
+
+    if (sabor?.precio != null) {
+      return Number(sabor.precio);
+    }
+
+    return this.tipo() === 'DELIVERY' ? PRECIO_DELIVERY : null;
   }
 
   protected cambiarCantidad(indice: number, valor: number | null): void {
@@ -489,15 +524,13 @@ export class SalidasPagina {
       return;
     }
 
-    const precio = this.precio();
-
     const detalles = this.lineas()
       .filter((linea) => linea.saborId !== '' && (linea.cantidad ?? 0) > 0)
       .map((linea) => ({
         saborId: linea.saborId,
         cantidad: linea.cantidad ?? 0,
         loteId: linea.loteId === '' ? undefined : linea.loteId,
-        precioUnitario: precio ?? undefined,
+        precioUnitario: linea.precio ?? undefined,
       }));
 
     this.enviando.set(true);
@@ -552,7 +585,13 @@ export class SalidasPagina {
 
   private async cargar(): Promise<void> {
     try {
-      this.destinos.set(await this.destinosService.listar(undefined, true));
+      const [destinos, sabores] = await Promise.all([
+        this.destinosService.listar(undefined, true),
+        this.saboresService.listar(),
+      ]);
+
+      this.destinos.set(destinos);
+      this.sabores.set(sabores);
       await this.refrescar();
     } catch (error: unknown) {
       this.avisos.error(mensajeDe(error));
