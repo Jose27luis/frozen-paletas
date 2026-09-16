@@ -15,4 +15,11 @@ export class CausaMermaDto {
 
   @ApiProperty({ example: true })
   activa: boolean;
+
+  @ApiProperty({
+    example: 3,
+    description:
+      'Mermas registradas con esta causa; con una sola ya no se puede eliminar',
+  })
+  usos: number;
 }
