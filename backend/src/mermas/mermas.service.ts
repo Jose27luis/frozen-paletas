@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { aFecha, fechaDeHoy, rangoDeFechas } from '../common/fechas/fecha';
+import {
+  aFecha,
+  aTextoIso,
+  fechaDeHoy,
+  rangoDeFechas,
+} from '../common/fechas/fecha';
 import { UsuarioAutenticado } from '../common/tipos/usuario-autenticado';
 import { Prisma } from '../generated/prisma/client';
 import { OrigenMerma, TipoMovimiento } from '../generated/prisma/enums';
@@ -9,9 +14,13 @@ import { SaboresService } from '../sabores/sabores.service';
 import { CausasService } from './causas.service';
 import { ListarMermasDto } from './dto/listar-mermas.dto';
 import { MermaDto } from './dto/merma.dto';
+import { RangoMermasDto } from './dto/rango-mermas.dto';
 import { RegistrarMermaDto } from './dto/registrar-merma.dto';
+import { ResumenMermasDto } from './dto/resumen-mermas.dto';
 
 const LIMITE_POR_DEFECTO = 100;
+const DIAS_POR_DEFECTO = 30;
+const MILISEGUNDOS_POR_DIA = 24 * 60 * 60 * 1000;
 
 const SELECCION_MERMA = {
   id: true,
@@ -171,6 +180,69 @@ export class MermasService {
     });
 
     return mermas.map(aDto);
+  }
+
+  async resumen(rango: RangoMermasDto): Promise<ResumenMermasDto> {
+    const hasta =
+      rango.hasta === undefined ? fechaDeHoy() : aFecha(rango.hasta);
+    const desde =
+      rango.desde === undefined
+        ? new Date(
+            hasta.getTime() - (DIAS_POR_DEFECTO - 1) * MILISEGUNDOS_POR_DIA,
+          )
+        : aFecha(rango.desde);
+
+    const mermas = await this.prisma.merma.findMany({
+      where: { fecha: { gte: desde, lte: hasta } },
+      select: {
+        cantidad: true,
+        origen: true,
+        causa: { select: { nombre: true } },
+        sabor: { select: { nombre: true } },
+      },
+    });
+
+    const porCausa = new Map<string, { cantidad: number; registros: number }>();
+    const porSabor = new Map<string, number>();
+
+    let enAlmacen = 0;
+    let enProceso = 0;
+
+    for (const merma of mermas) {
+      const causa = porCausa.get(merma.causa.nombre) ?? {
+        cantidad: 0,
+        registros: 0,
+      };
+
+      causa.cantidad += merma.cantidad;
+      causa.registros += 1;
+      porCausa.set(merma.causa.nombre, causa);
+
+      porSabor.set(
+        merma.sabor.nombre,
+        (porSabor.get(merma.sabor.nombre) ?? 0) + merma.cantidad,
+      );
+
+      if (merma.origen === OrigenMerma.STOCK) {
+        enAlmacen += merma.cantidad;
+      } else {
+        enProceso += merma.cantidad;
+      }
+    }
+
+    return {
+      desde: aTextoIso(desde),
+      hasta: aTextoIso(hasta),
+      total: enAlmacen + enProceso,
+      enAlmacen,
+      enProceso,
+      porCausa: [...porCausa.entries()]
+        .map(([causa, datos]) => ({ causa, ...datos }))
+        .sort((uno, otro) => otro.cantidad - uno.cantidad),
+      porSabor: [...porSabor.entries()]
+        .map(([sabor, cantidad]) => ({ sabor, cantidad }))
+        .sort((uno, otro) => otro.cantidad - uno.cantidad),
+    };
   }
 
   private async buscarPorClave(
