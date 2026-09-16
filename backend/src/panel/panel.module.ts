@@ -3,12 +3,13 @@ import { InventarioModule } from '../inventario/inventario.module';
 import { MermasModule } from '../mermas/mermas.module';
 import { ProduccionModule } from '../produccion/produccion.module';
 import { SalidasModule } from '../salidas/salidas.module';
+import { IndicadoresService } from './indicadores.service';
 import { PanelController } from './panel.controller';
 import { PanelService } from './panel.service';
 
 @Module({
   imports: [InventarioModule, MermasModule, ProduccionModule, SalidasModule],
   controllers: [PanelController],
-  providers: [PanelService],
+  providers: [PanelService, IndicadoresService],
 })
 export class PanelModule {}
