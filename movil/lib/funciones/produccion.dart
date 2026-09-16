@@ -7,6 +7,7 @@ import '../dominio/modelos.dart';
 import '../nucleo/formato.dart';
 import '../nucleo/proveedores.dart';
 import '../nucleo/tema.dart';
+import '../ui/menu_lateral.dart';
 import '../ui/piezas.dart';
 
 class PantallaProduccion extends ConsumerWidget {
@@ -20,6 +21,7 @@ class PantallaProduccion extends ConsumerWidget {
     final bool puede = usuario?.puede(Permisos.registrarProduccion) ?? false;
 
     return Scaffold(
+      drawer: const MenuLateral(),
       appBar: AppBar(title: const Text('Producción')),
       floatingActionButton: puede
           ? FloatingActionButton.extended(
