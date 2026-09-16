@@ -10,15 +10,9 @@ import { SaboresService } from '../nucleo/sabores.service';
 import { Campo } from '../ui/campo';
 import { CampoSeleccion, Opcion } from '../ui/campo-seleccion';
 import { Cargador } from '../ui/cargador';
-import { Chip, TonoChip } from '../ui/chip';
+import { Chip } from '../ui/chip';
+import { TONO_DEL_LOTE } from '../nucleo/estados';
 import { Icono } from '../ui/icono';
-
-const TONOS: Readonly<Record<EstadoLote, TonoChip>> = {
-  PENDIENTE: 'neutro',
-  ABIERTO: 'hoja',
-  PARCIAL: 'helado',
-  AGOTADO: 'neutro',
-};
 
 const MILISEGUNDOS_POR_DIA = 24 * 60 * 60 * 1000;
 
@@ -70,7 +64,9 @@ const MILISEGUNDOS_POR_DIA = 24 * 60 * 60 * 1000;
               <span class="cifra block text-2xl">{{ lote.stockRestante }}</span>
               <span class="text-xs text-tenue">de {{ lote.cantidadIngresada }} que ingresaron</span>
               <span class="mt-1 block">
-                <fz-chip [tono]="TONOS[lote.estado]">{{ ESTADOS_LOTE[lote.estado] }}</fz-chip>
+                <fz-chip [tono]="TONO_DEL_LOTE[lote.estado]">{{
+                  ESTADOS_LOTE[lote.estado]
+                }}</fz-chip>
               </span>
             </div>
           </div>
@@ -153,7 +149,9 @@ const MILISEGUNDOS_POR_DIA = 24 * 60 * 60 * 1000;
                 <span class="cifra block text-xl">{{ lote.stockRestante }}</span>
                 <span class="text-xs text-tenue">de {{ lote.cantidadIngresada }}</span>
                 <span class="mt-1 block">
-                  <fz-chip [tono]="TONOS[lote.estado]">{{ ESTADOS_LOTE[lote.estado] }}</fz-chip>
+                  <fz-chip [tono]="TONO_DEL_LOTE[lote.estado]">{{
+                    ESTADOS_LOTE[lote.estado]
+                  }}</fz-chip>
                 </span>
               </span>
 
@@ -247,7 +245,7 @@ export class LotesPagina {
 
   protected readonly ESTADOS_LOTE = ESTADOS_LOTE;
   protected readonly TIPOS_MOVIMIENTO = TIPOS_MOVIMIENTO;
-  protected readonly TONOS = TONOS;
+  protected readonly TONO_DEL_LOTE = TONO_DEL_LOTE;
   protected readonly fechaCorta = fechaCorta;
   protected readonly fechaLarga = fechaLarga;
   protected readonly miles = miles;
