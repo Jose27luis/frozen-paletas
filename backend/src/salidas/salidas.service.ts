@@ -96,9 +96,14 @@ function aDto(salida: SalidaSeleccionada): SalidaDto {
 function precioDe(
   linea: LineaSalidaDto,
   tipo: TipoSalida,
+  precioDelSabor: string | null,
 ): Prisma.Decimal | null {
   if (linea.precioUnitario !== undefined) {
     return new Prisma.Decimal(linea.precioUnitario);
+  }
+
+  if (precioDelSabor !== null) {
+    return new Prisma.Decimal(precioDelSabor);
   }
 
   return tipo === TipoSalida.DELIVERY ? PRECIO_DELIVERY : null;
@@ -137,8 +142,12 @@ export class SalidasService {
       );
     }
 
+    const precios = new Map<string, string | null>();
+
     for (const linea of datos.detalles) {
-      await this.saboresService.exigirSaborActivo(linea.saborId);
+      const sabor = await this.saboresService.exigirSaborActivo(linea.saborId);
+
+      precios.set(linea.saborId, sabor.precio);
     }
 
     const fecha =
@@ -176,7 +185,11 @@ export class SalidasService {
             saborId: linea.saborId,
             loteId: asignacion.loteId,
             cantidad: asignacion.cantidad,
-            precioUnitario: precioDe(linea, datos.tipo),
+            precioUnitario: precioDe(
+              linea,
+              datos.tipo,
+              precios.get(linea.saborId) ?? null,
+            ),
             loteManual: asignacion.manual,
           })),
         });
