@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -7,7 +7,10 @@ import {
 } from '@nestjs/swagger';
 import { RequierePermiso } from '../common/decoradores/permiso.decorator';
 import { PERMISOS } from '../permisos/claves';
+import { IndicadoresDto } from './dto/indicadores.dto';
 import { PanelDto } from './dto/panel.dto';
+import { RangoIndicadoresDto } from './dto/rango-indicadores.dto';
+import { IndicadoresService } from './indicadores.service';
 import { PanelService } from './panel.service';
 
 @ApiTags('Panel')
@@ -15,7 +18,10 @@ import { PanelService } from './panel.service';
 @RequierePermiso(PERMISOS.CONSULTAR_INVENTARIO)
 @Controller('panel')
 export class PanelController {
-  constructor(private readonly panelService: PanelService) {}
+  constructor(
+    private readonly panelService: PanelService,
+    private readonly indicadoresService: IndicadoresService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -25,5 +31,15 @@ export class PanelController {
   @ApiOkResponse({ type: PanelDto })
   resumen(): Promise<PanelDto> {
     return this.panelService.resumen();
+  }
+
+  @Get('indicadores')
+  @ApiOperation({
+    summary:
+      'Calcular producción, salidas por canal, merma y rotación de un rango de fechas',
+  })
+  @ApiOkResponse({ type: IndicadoresDto })
+  indicadores(@Query() rango: RangoIndicadoresDto): Promise<IndicadoresDto> {
+    return this.indicadoresService.calcular(rango);
   }
 }
