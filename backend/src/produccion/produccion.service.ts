@@ -7,7 +7,6 @@ import {
 import { randomUUID } from 'node:crypto';
 import { aFecha, fechaDeHoy, rangoDeFechas } from '../common/fechas/fecha';
 import { UsuarioAutenticado } from '../common/tipos/usuario-autenticado';
-import { Prisma } from '../generated/prisma/client';
 import { EstadoProduccion } from '../generated/prisma/enums';
 import { MovimientosService } from '../inventario/movimientos.service';
 import { LotesService } from '../lotes/lotes.service';
@@ -20,51 +19,13 @@ import { ListarProduccionesDto } from './dto/listar-producciones.dto';
 import { ProduccionDto } from './dto/produccion.dto';
 import { RegistrarEmbolsadoDto } from './dto/registrar-embolsado.dto';
 import { RegistrarProduccionDto } from './dto/registrar-produccion.dto';
+import {
+  aProduccionDto,
+  ProduccionSeleccionada,
+  SELECCION_PRODUCCION,
+} from './produccion.mapa';
 
 const LIMITE_POR_DEFECTO = 100;
-
-const SELECCION_PRODUCCION = {
-  id: true,
-  fecha: true,
-  saborId: true,
-  cantidadObtenida: true,
-  cantidadEmbolsada: true,
-  estado: true,
-  motivoAnulacion: true,
-  embolsadoEn: true,
-  creadoEn: true,
-  sabor: { select: { nombre: true } },
-  responsable: { select: { nombres: true, apellidos: true } },
-  lote: { select: { id: true, codigo: true } },
-} satisfies Prisma.ProduccionSelect;
-
-type ProduccionSeleccionada = Prisma.ProduccionGetPayload<{
-  select: typeof SELECCION_PRODUCCION;
-}>;
-
-function aDto(produccion: ProduccionSeleccionada): ProduccionDto {
-  const { nombres, apellidos } = produccion.responsable;
-
-  return {
-    id: produccion.id,
-    fecha: produccion.fecha,
-    saborId: produccion.saborId,
-    sabor: produccion.sabor.nombre,
-    cantidadObtenida: produccion.cantidadObtenida,
-    cantidadEmbolsada: produccion.cantidadEmbolsada,
-    merma:
-      produccion.cantidadEmbolsada === null
-        ? null
-        : produccion.cantidadObtenida - produccion.cantidadEmbolsada,
-    estado: produccion.estado,
-    loteId: produccion.lote?.id ?? null,
-    lote: produccion.lote?.codigo ?? null,
-    responsable: `${nombres} ${apellidos}`,
-    motivoAnulacion: produccion.motivoAnulacion,
-    embolsadoEn: produccion.embolsadoEn,
-    creadoEn: produccion.creadoEn,
-  };
-}
 
 @Injectable()
 export class ProduccionService {
@@ -119,7 +80,7 @@ export class ProduccionService {
       });
     });
 
-    return aDto(produccion);
+    return aProduccionDto(produccion);
   }
 
   async embolsar(
@@ -203,7 +164,7 @@ export class ProduccionService {
       });
     });
 
-    return aDto(actualizada);
+    return aProduccionDto(actualizada);
   }
 
   async anular(id: string, datos: AnularProduccionDto): Promise<ProduccionDto> {
@@ -226,7 +187,7 @@ export class ProduccionService {
       select: SELECCION_PRODUCCION,
     });
 
-    return aDto(anulada);
+    return aProduccionDto(anulada);
   }
 
   async listar(filtros: ListarProduccionesDto): Promise<ProduccionDto[]> {
@@ -241,7 +202,7 @@ export class ProduccionService {
       select: SELECCION_PRODUCCION,
     });
 
-    return producciones.map(aDto);
+    return producciones.map(aProduccionDto);
   }
 
   async pendientesDeEmbolsar(): Promise<ProduccionDto[]> {
@@ -251,11 +212,11 @@ export class ProduccionService {
       select: SELECCION_PRODUCCION,
     });
 
-    return producciones.map(aDto);
+    return producciones.map(aProduccionDto);
   }
 
   async obtener(id: string): Promise<ProduccionDto> {
-    return aDto(await this.exigirProduccion(id));
+    return aProduccionDto(await this.exigirProduccion(id));
   }
 
   private async exigirProduccion(id: string): Promise<ProduccionSeleccionada> {
@@ -282,6 +243,6 @@ export class ProduccionService {
       select: SELECCION_PRODUCCION,
     });
 
-    return produccion === null ? null : aDto(produccion);
+    return produccion === null ? null : aProduccionDto(produccion);
   }
 }
