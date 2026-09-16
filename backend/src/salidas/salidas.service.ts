@@ -1,138 +1,23 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { aFecha, fechaDeHoy, rangoDeFechas } from '../common/fechas/fecha';
 import { UsuarioAutenticado } from '../common/tipos/usuario-autenticado';
 import { DestinosService } from '../destinos/destinos.service';
-import { Prisma } from '../generated/prisma/client';
-import {
-  ListaPrecios,
-  TipoMovimiento,
-  TipoSalida,
-} from '../generated/prisma/enums';
+import { ListaPrecios, TipoMovimiento } from '../generated/prisma/enums';
 import { MovimientosService } from '../inventario/movimientos.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { SaborDto } from '../sabores/dto/sabor.dto';
 import { SaboresService } from '../sabores/sabores.service';
 import { ListarSalidasDto } from './dto/listar-salidas.dto';
-import { LineaSalidaDto, RegistrarSalidaDto } from './dto/registrar-salida.dto';
-import { SalidaDetalleDto, SalidaDto } from './dto/salida.dto';
+import { RegistrarSalidaDto } from './dto/registrar-salida.dto';
+import { SalidaDto } from './dto/salida.dto';
+import {
+  exigirSalidaCoherente,
+  listaHabitualDe,
+  precioDe,
+  precioDelCatalogo,
+} from './reglas-salida';
+import { aSalidaDto, SELECCION_SALIDA } from './salida.mapa';
 
 const LIMITE_POR_DEFECTO = 100;
-const PEDIDO_MINIMO_DELIVERY = 12;
-const PRECIO_DELIVERY = new Prisma.Decimal('5.00');
-
-const TIPOS_CON_DESTINO_OBLIGATORIO: readonly TipoSalida[] = [
-  TipoSalida.PDV,
-  TipoSalida.MAYORISTA,
-];
-
-const CANALES_POR_MAYOR: readonly TipoSalida[] = [
-  TipoSalida.PDV,
-  TipoSalida.MAYORISTA,
-];
-
-function listaHabitualDe(tipo: TipoSalida): ListaPrecios {
-  return CANALES_POR_MAYOR.includes(tipo)
-    ? ListaPrecios.MAYOR
-    : ListaPrecios.UNIDAD;
-}
-
-const SELECCION_SALIDA = {
-  id: true,
-  fecha: true,
-  tipo: true,
-  listaPrecios: true,
-  destinoId: true,
-  motivo: true,
-  creadoEn: true,
-  destino: { select: { nombre: true } },
-  usuario: { select: { nombres: true, apellidos: true } },
-  detalles: {
-    select: {
-      saborId: true,
-      loteId: true,
-      cantidad: true,
-      precioUnitario: true,
-      loteManual: true,
-      sabor: { select: { nombre: true } },
-      lote: { select: { codigo: true } },
-    },
-  },
-} satisfies Prisma.SalidaSelect;
-
-type SalidaSeleccionada = Prisma.SalidaGetPayload<{
-  select: typeof SELECCION_SALIDA;
-}>;
-
-function aDetalleDto(
-  detalle: SalidaSeleccionada['detalles'][number],
-): SalidaDetalleDto {
-  return {
-    saborId: detalle.saborId,
-    sabor: detalle.sabor.nombre,
-    loteId: detalle.loteId,
-    lote: detalle.lote.codigo,
-    cantidad: detalle.cantidad,
-    precioUnitario: detalle.precioUnitario?.toFixed(2) ?? null,
-    loteManual: detalle.loteManual,
-  };
-}
-
-function aDto(salida: SalidaSeleccionada): SalidaDto {
-  const importe = salida.detalles.reduce(
-    (suma, detalle) =>
-      suma.plus(
-        (detalle.precioUnitario ?? new Prisma.Decimal(0)).times(
-          detalle.cantidad,
-        ),
-      ),
-    new Prisma.Decimal(0),
-  );
-
-  return {
-    id: salida.id,
-    fecha: salida.fecha,
-    tipo: salida.tipo,
-    listaPrecios: salida.listaPrecios,
-    destinoId: salida.destinoId,
-    destino: salida.destino?.nombre ?? null,
-    motivo: salida.motivo,
-    cantidadTotal: salida.detalles.reduce(
-      (suma, detalle) => suma + detalle.cantidad,
-      0,
-    ),
-    importe: importe.toFixed(2),
-    usuario: `${salida.usuario.nombres} ${salida.usuario.apellidos}`,
-    detalles: salida.detalles.map(aDetalleDto),
-    creadoEn: salida.creadoEn,
-  };
-}
-
-function precioDelCatalogo(
-  sabor: SaborDto,
-  lista: ListaPrecios,
-): string | null {
-  return lista === ListaPrecios.MAYOR ? sabor.precioMayor : sabor.precioUnidad;
-}
-
-function precioDe(
-  linea: LineaSalidaDto,
-  tipo: TipoSalida,
-  precioDelSabor: string | null,
-): Prisma.Decimal | null {
-  if (linea.precioUnitario !== undefined) {
-    return new Prisma.Decimal(linea.precioUnitario);
-  }
-
-  if (precioDelSabor !== null) {
-    return new Prisma.Decimal(precioDelSabor);
-  }
-
-  return tipo === TipoSalida.DELIVERY ? PRECIO_DELIVERY : null;
-}
 
 @Injectable()
 export class SalidasService {
@@ -156,9 +41,7 @@ export class SalidasService {
       return yaRegistrada;
     }
 
-    this.exigirDestinoCoherente(datos);
-    this.exigirLineasSinRepetir(datos.detalles);
-    this.exigirPedidoMinimo(datos);
+    exigirSalidaCoherente(datos);
 
     if (datos.destinoId !== undefined) {
       await this.destinosService.exigirDestinoDelTipo(
@@ -168,14 +51,7 @@ export class SalidasService {
     }
 
     const lista = datos.listaPrecios ?? listaHabitualDe(datos.tipo);
-    const precios = new Map<string, string | null>();
-
-    for (const linea of datos.detalles) {
-      const sabor = await this.saboresService.exigirSaborActivo(linea.saborId);
-
-      precios.set(linea.saborId, precioDelCatalogo(sabor, lista));
-    }
-
+    const precios = await this.preciosDelCatalogo(datos, lista);
     const fecha =
       datos.fecha === undefined ? fechaDeHoy() : aFecha(datos.fecha);
 
@@ -228,7 +104,7 @@ export class SalidasService {
       });
     });
 
-    return aDto(salida);
+    return aSalidaDto(salida);
   }
 
   async listar(filtros: ListarSalidasDto): Promise<SalidaDto[]> {
@@ -243,7 +119,7 @@ export class SalidasService {
       select: SELECCION_SALIDA,
     });
 
-    return salidas.map(aDto);
+    return salidas.map(aSalidaDto);
   }
 
   async obtener(id: string): Promise<SalidaDto> {
@@ -256,57 +132,22 @@ export class SalidasService {
       throw new NotFoundException('La salida no existe');
     }
 
-    return aDto(salida);
+    return aSalidaDto(salida);
   }
 
-  private exigirDestinoCoherente(datos: RegistrarSalidaDto): void {
-    if (
-      TIPOS_CON_DESTINO_OBLIGATORIO.includes(datos.tipo) &&
-      datos.destinoId === undefined
-    ) {
-      throw new BadRequestException(
-        'Falta indicar el punto de venta o el cliente que recibe el producto',
-      );
+  private async preciosDelCatalogo(
+    datos: RegistrarSalidaDto,
+    lista: ListaPrecios,
+  ): Promise<Map<string, string | null>> {
+    const precios = new Map<string, string | null>();
+
+    for (const linea of datos.detalles) {
+      const sabor = await this.saboresService.exigirSaborActivo(linea.saborId);
+
+      precios.set(linea.saborId, precioDelCatalogo(sabor, lista));
     }
 
-    if (datos.destinoId === undefined && datos.motivo === undefined) {
-      throw new BadRequestException(
-        'Sin destino registrado hay que explicar a dónde va el producto',
-      );
-    }
-  }
-
-  private exigirLineasSinRepetir(detalles: LineaSalidaDto[]): void {
-    const vistas = new Set<string>();
-
-    for (const linea of detalles) {
-      const clave = `${linea.saborId}:${linea.loteId ?? 'peps'}`;
-
-      if (vistas.has(clave)) {
-        throw new BadRequestException(
-          'Hay un sabor repetido en el detalle: súmalo en una sola línea',
-        );
-      }
-
-      vistas.add(clave);
-    }
-  }
-
-  private exigirPedidoMinimo(datos: RegistrarSalidaDto): void {
-    if (datos.tipo !== TipoSalida.DELIVERY) {
-      return;
-    }
-
-    const total = datos.detalles.reduce(
-      (suma, linea) => suma + linea.cantidad,
-      0,
-    );
-
-    if (total < PEDIDO_MINIMO_DELIVERY) {
-      throw new BadRequestException(
-        `El pedido mínimo de delivery es de ${PEDIDO_MINIMO_DELIVERY} paletas`,
-      );
-    }
+    return precios;
   }
 
   private async buscarPorClave(
@@ -320,6 +161,6 @@ export class SalidasService {
       select: SELECCION_SALIDA,
     });
 
-    return salida === null ? null : aDto(salida);
+    return salida === null ? null : aSalidaDto(salida);
   }
 }
