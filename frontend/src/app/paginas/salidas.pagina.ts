@@ -109,7 +109,8 @@ function lineaVacia(): Linea {
                 <fz-campo etiqueta="Fecha" tipo="date" [(valor)]="fecha" />
                 <fz-campo-numero
                   etiqueta="Precio por paleta"
-                  ayuda="Déjalo vacío si no se cobra."
+                  ayuda="Admite decimales, por ejemplo 3.20. Vacío si no se cobra."
+                  [paso]="0.01"
                   [(valor)]="precio"
                 />
               </div>
