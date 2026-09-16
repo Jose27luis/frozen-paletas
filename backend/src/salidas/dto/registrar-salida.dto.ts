@@ -16,7 +16,7 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { TipoSalida } from '../../generated/prisma/enums';
+import { ListaPrecios, TipoSalida } from '../../generated/prisma/enums';
 
 export class LineaSalidaDto {
   @ApiProperty({ format: 'uuid' })
@@ -61,6 +61,16 @@ export class RegistrarSalidaDto {
   @ApiProperty({ enum: TipoSalida, enumName: 'TipoSalida' })
   @IsEnum(TipoSalida)
   tipo: TipoSalida;
+
+  @ApiPropertyOptional({
+    enum: ListaPrecios,
+    enumName: 'ListaPrecios',
+    description:
+      'Con qué lista se cobra. Si no se envía, se usa la habitual del canal',
+  })
+  @IsOptional()
+  @IsEnum(ListaPrecios)
+  listaPrecios?: ListaPrecios;
 
   @ApiPropertyOptional({
     format: 'uuid',
