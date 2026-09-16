@@ -49,10 +49,20 @@ export class ActualizarSaborDto {
   @Min(0)
   stockMinimo?: number;
 
-  @ApiPropertyOptional({ example: 5, description: 'Precio por paleta' })
+  @ApiPropertyOptional({
+    example: 5,
+    description: 'Precio de venta al público',
+  })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   @Max(1000)
-  precio?: number;
+  precioUnidad?: number;
+
+  @ApiPropertyOptional({ example: 3.2, description: 'Precio por mayor' })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(1000)
+  precioMayor?: number;
 }
