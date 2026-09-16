@@ -660,6 +660,20 @@ Todos se filtran por rango de fechas y se exportan. Viven en el panel web: son t
 
 ---
 
+## Qué entra en la app
+
+La APK no repite el panel web. Lleva lo que se hace de pie, en el almacén o en la puerta del congelador:
+
+| Pantalla | Para qué |
+|---|---|
+| Panel | Stock total, qué sabores hay que producir y cuántas producciones esperan conteo |
+| Inventario | Stock por sabor con su mínimo, y **búsqueda de un lote por su código** |
+| Producción | Registrar lo que salió del balde y cerrar el embolsado |
+| Salidas | Descontar un despacho eligiendo canal y lista de precios |
+| Mermas | Anotar producto perdido en almacén |
+
+Lo que exige leer una tabla ancha —reportes, historial con filtros, administración de sabores, usuarios y permisos— se queda en la web. La app respeta los permisos que devuelve el servidor: si un rol no puede registrar salidas, no le aparece el botón.
+
 ## Trabajo sin señal
 
 La producción y el embolsado se registran dentro del almacén, donde la cobertura falla. La app no puede quedarse esperando internet.
