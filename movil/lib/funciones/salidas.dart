@@ -7,6 +7,7 @@ import '../dominio/modelos.dart';
 import '../nucleo/formato.dart';
 import '../nucleo/proveedores.dart';
 import '../nucleo/tema.dart';
+import '../ui/menu_lateral.dart';
 import '../ui/piezas.dart';
 
 const List<String> _tiposConDestino = <String>[
@@ -28,6 +29,7 @@ class PantallaSalidas extends ConsumerWidget {
     final bool puede = usuario?.puede(Permisos.registrarSalidas) ?? false;
 
     return Scaffold(
+      drawer: const MenuLateral(),
       appBar: AppBar(title: const Text('Salidas')),
       floatingActionButton: puede
           ? FloatingActionButton.extended(
