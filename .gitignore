@@ -20,3 +20,4 @@ AGENTS.md
 .pub-docker/
 .gradle-docker/
 movil/build/
+movil/secretos/
