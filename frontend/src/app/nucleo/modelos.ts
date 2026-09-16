@@ -47,7 +47,8 @@ export interface Sabor {
   categoria: CategoriaSabor;
   estado: EstadoSabor;
   stockMinimo: number;
-  precio: string | null;
+  precioUnidad: string | null;
+  precioMayor: string | null;
   creadoEn: string;
 }
 
