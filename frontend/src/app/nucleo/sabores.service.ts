@@ -10,7 +10,8 @@ export interface DatosSabor {
   categoria: CategoriaSabor;
   estado?: EstadoSabor;
   stockMinimo?: number;
-  precio?: number;
+  precioUnidad?: number;
+  precioMayor?: number;
 }
 
 @Injectable({ providedIn: 'root' })
