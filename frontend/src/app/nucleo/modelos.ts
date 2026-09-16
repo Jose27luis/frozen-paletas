@@ -50,6 +50,13 @@ export interface Sabor {
   creadoEn: string;
 }
 
+export interface LoteMasAntiguo {
+  codigo: string;
+  fecha: string;
+  stockRestante: number;
+  antiguedad: number;
+}
+
 export interface StockSabor {
   saborId: string;
   nombre: string;
@@ -59,6 +66,8 @@ export interface StockSabor {
   stock: number;
   stockMinimo: number;
   estado: EstadoStock;
+  lotesAbiertos: number;
+  loteMasAntiguo: LoteMasAntiguo | null;
 }
 
 export interface Inventario {
