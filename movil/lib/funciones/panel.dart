@@ -42,7 +42,7 @@ class PantallaPanel extends ConsumerWidget {
               ..invalidate(indicadoresProvider);
           },
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            padding: margenDeLista(context, abajo: 32),
             children: <Widget>[
               _Cabecera(panel: datos, indicadores: indicadores.value),
               const SizedBox(height: 16),
