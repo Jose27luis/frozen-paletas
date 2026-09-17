@@ -46,7 +46,7 @@ class PantallaSabores extends ConsumerWidget {
                   ],
                 )
               : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                  padding: margenDeLista(context, abajo: 96),
                   itemCount: sabores.length,
                   separatorBuilder: (BuildContext contexto, int indice) =>
                       const SizedBox(height: 10),
@@ -300,12 +300,7 @@ Future<void> _editar(
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (BuildContext hoja) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(hoja).viewInsets.bottom,
-      ),
-      child: _Formulario(sabor: sabor),
-    ),
+    builder: (BuildContext hoja) => Hoja(child: _Formulario(sabor: sabor)),
   );
 }
 
@@ -403,7 +398,7 @@ class _FormularioState extends ConsumerState<_Formulario> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
+    return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
