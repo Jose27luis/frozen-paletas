@@ -66,6 +66,20 @@ class ClienteApi {
     return respuesta.data ?? <String, Object?>{};
   }
 
+  Future<List<Map<String, Object?>>> reemplazar(
+    String ruta,
+    Map<String, Object?> cuerpo,
+  ) async {
+    final Response<List<Object?>> respuesta = await _dio.put<List<Object?>>(
+      ruta,
+      data: cuerpo,
+    );
+
+    return (respuesta.data ?? <Object?>[])
+        .map((Object? fila) => fila! as Map<String, Object?>)
+        .toList(growable: false);
+  }
+
   Future<Map<String, Object?>> borrar(String ruta) async {
     final Response<Map<String, Object?>> respuesta =
         await _dio.delete<Map<String, Object?>>(ruta);
