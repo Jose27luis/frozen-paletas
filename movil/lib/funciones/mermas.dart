@@ -55,17 +55,15 @@ class _PantallaMermasState extends ConsumerState<PantallaMermas> {
         ],
       ),
       flotante: puede && _vista == _Vista.registro
-          ? FloatingActionButton.extended(
-              backgroundColor: Paleta.marino,
-              foregroundColor: Paleta.superficie,
-              onPressed: () => showModalBottomSheet<void>(
+          ? Boton(
+              icono: Icons.add,
+              texto: 'Nueva merma',
+              alTocar: () => showModalBottomSheet<void>(
                 context: context,
                 isScrollControlled: true,
                 builder: (BuildContext hoja) =>
                     const Hoja(child: _FormularioMerma()),
               ),
-              icon: const Icon(Icons.add),
-              label: const Text('Registrar'),
             )
           : null,
       cuerpo: switch (_vista) {
@@ -222,42 +220,11 @@ class _Resumen extends ConsumerWidget {
       construir: (ResumenMermas resumen) => ListView(
         padding: margenDeLista(context),
         children: <Widget>[
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const Rotulo('Paletas perdidas'),
-                        const SizedBox(height: 4),
-                        Cifra(
-                          miles(resumen.total),
-                          tamano: 32,
-                          tono: Paleta.granate,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: <Widget>[
-                      Etiqueta(
-                        '${miles(resumen.enProceso)} en proceso',
-                        tono: Paleta.aguajeVivo,
-                      ),
-                      const SizedBox(height: 8),
-                      Etiqueta(
-                        '${miles(resumen.enAlmacen)} en almacén',
-                        tono: Paleta.granate,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+          Cabecera(
+            rotulo: 'Paletas perdidas',
+            valor: miles(resumen.total),
+            apunte: '${miles(resumen.enProceso)} antes de entrar al stock, '
+                '${miles(resumen.enAlmacen)} ya en almacén',
           ),
           const SizedBox(height: 20),
           const _Titulo('Por qué se perdieron'),
