@@ -6,131 +6,170 @@ import '../nucleo/formato.dart';
 import '../nucleo/modulos.dart';
 import '../nucleo/proveedores.dart';
 import '../nucleo/tema.dart';
-import '../ui/menu_lateral.dart';
+import '../ui/barras.dart';
+import '../ui/filtros.dart';
+import '../ui/pantalla.dart';
 import '../ui/piezas.dart';
 
-const List<int> _rangos = <int>[7, 30, 90];
+enum _Metrica { stock, producido, salido, merma }
 
-class PantallaPanel extends ConsumerWidget {
+class _Vista {
+  const _Vista({
+    required this.titulo,
+    required this.apunte,
+    required this.tono,
+    required this.valor,
+  });
+
+  final String titulo;
+  final String apunte;
+  final Color tono;
+  final int Function(IndicadorSabor) valor;
+}
+
+const Map<_Metrica, _Vista> _vistas = <_Metrica, _Vista>{
+  _Metrica.stock: _Vista(
+    titulo: 'Paletas disponibles ahora',
+    apunte: 'Lo que hay hoy en el almacén, sabor por sabor.',
+    tono: Paleta.marino,
+    valor: _stock,
+  ),
+  _Metrica.producido: _Vista(
+    titulo: 'Entró al stock en el periodo',
+    apunte: 'Solo cuenta lo embolsado: el stock sube ahí, no antes.',
+    tono: Paleta.helado,
+    valor: _producido,
+  ),
+  _Metrica.salido: _Vista(
+    titulo: 'Salió en el periodo',
+    apunte: 'Paletas despachadas a todos los canales.',
+    tono: Paleta.hoja,
+    valor: _salido,
+  ),
+  _Metrica.merma: _Vista(
+    titulo: 'Se perdió en el periodo',
+    apunte: 'Mermas de producción, embolsado y almacén.',
+    tono: Paleta.granate,
+    valor: _merma,
+  ),
+};
+
+int _stock(IndicadorSabor sabor) => sabor.stock;
+int _producido(IndicadorSabor sabor) => sabor.producido;
+int _salido(IndicadorSabor sabor) => sabor.salido;
+int _merma(IndicadorSabor sabor) => sabor.merma;
+
+class PantallaPanel extends ConsumerStatefulWidget {
   const PantallaPanel({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<Panel> panel = ref.watch(panelProvider);
+  ConsumerState<PantallaPanel> createState() => _PantallaPanelState();
+}
+
+class _PantallaPanelState extends ConsumerState<PantallaPanel> {
+  _Metrica _metrica = _Metrica.stock;
+
+  @override
+  Widget build(BuildContext context) {
     final AsyncValue<Indicadores> indicadores = ref.watch(indicadoresProvider);
     final Usuario? usuario = ref.watch(sesionProvider).value;
 
-    return Scaffold(
-      drawer: const MenuLateral(),
-      appBar: AppBar(
-        title: Text('Hola, ${usuario?.nombres ?? ''}'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(52),
-          child: _Rangos(dias: ref.watch(rangoProvider)),
-        ),
-      ),
-      body: panel.when(
-        loading: () => const Cargando(),
-        error: (Object error, StackTrace rastro) => Fallo(
-          mensaje: error.toString(),
-          reintentar: () => ref.invalidate(panelProvider),
-        ),
-        data: (Panel datos) => RefreshIndicator(
-          onRefresh: () async {
-            ref
-              ..invalidate(panelProvider)
-              ..invalidate(indicadoresProvider);
-          },
-          child: ListView(
-            padding: margenDeLista(context, abajo: 32),
-            children: <Widget>[
-              _Cabecera(panel: datos, indicadores: indicadores.value),
-              const SizedBox(height: 16),
-              _Alertas(panel: datos),
-              const SizedBox(height: 22),
-              indicadores.when(
-                loading: () => const Cargando(),
-                error: (Object error, StackTrace rastro) => Fallo(
-                  mensaje: error.toString(),
-                  reintentar: () => ref.invalidate(indicadoresProvider),
-                ),
-                data: (Indicadores medidas) => _Indicadores(medidas: medidas),
-              ),
-              const SizedBox(height: 22),
-              const _Titulo('Últimas salidas'),
-              const SizedBox(height: 10),
-              if (datos.salidasRecientes.isEmpty)
-                const Vacio('Todavía no hay salidas registradas.')
-              else
-                Card(
-                  child: Column(
-                    children: <Widget>[
-                      for (final Salida salida in datos.salidasRecientes)
-                        ListTile(
-                          leading: const Icon(
-                            Icons.local_shipping_outlined,
-                            color: Paleta.marino,
-                          ),
-                          title: Text(
-                            Etiquetas.tipoSalida[salida.tipo] ?? salida.tipo,
-                          ),
-                          subtitle: Text(
-                            '${fechaCorta(salida.fecha)} · ${salida.destino ?? 'Sin destino'}',
-                          ),
-                          trailing: Text(
-                            '${miles(salida.cantidadTotal)} p.',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Paleta.tinta,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Rangos extends ConsumerWidget {
-  const _Rangos({required this.dias});
-
-  final int dias;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      color: Paleta.superficie,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Row(
+    return Pantalla(
+      titulo: 'Hola, ${usuario?.nombres ?? ''}',
+      filtros: BarraDeFiltros(
         children: <Widget>[
-          for (final int opcion in _rangos)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                label: Text('$opcion días'),
-                selected: opcion == dias,
-                showCheckmark: false,
-                selectedColor: Paleta.marino,
-                backgroundColor: Paleta.hundido,
-                side: BorderSide.none,
-                labelStyle: TextStyle(
-                  color: opcion == dias ? Paleta.superficie : Paleta.tenue,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-                onSelected: (bool _) =>
-                    ref.read(rangoProvider.notifier).cambiar(opcion),
-              ),
-            ),
+          FilaDeChips<int>(
+            opciones: const <Opcion<int>>[
+              Opcion<int>(valor: 7, texto: '7 días'),
+              Opcion<int>(valor: 30, texto: '30 días'),
+              Opcion<int>(valor: 90, texto: '90 días'),
+            ],
+            elegida: ref.watch(rangoProvider),
+            alElegir: (int dias) =>
+                ref.read(rangoProvider.notifier).cambiar(dias),
+          ),
         ],
       ),
+      cuerpo: Cargado<Panel>(
+        valor: ref.watch(panelProvider),
+        alRefrescar: () {
+          ref
+            ..invalidate(panelProvider)
+            ..invalidate(indicadoresProvider);
+        },
+        construir: (Panel datos) => ListView(
+          padding: margenDeLista(context, abajo: 32),
+          children: <Widget>[
+            _Cabecera(panel: datos, indicadores: indicadores.value),
+            const SizedBox(height: 16),
+            _Alertas(panel: datos),
+            const SizedBox(height: 22),
+            indicadores.when(
+              loading: () => const Cargando(),
+              error: (Object error, StackTrace rastro) => Fallo(
+                mensaje: error.toString(),
+                reintentar: () => ref.invalidate(indicadoresProvider),
+              ),
+              data: (Indicadores medidas) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  _Kpis(medidas: medidas),
+                  const SizedBox(height: 22),
+                  const Titulo('Comparar los sabores'),
+                  const SizedBox(height: 10),
+                  FilaDeChips<_Metrica>(
+                    opciones: const <Opcion<_Metrica>>[
+                      Opcion<_Metrica>(valor: _Metrica.stock, texto: 'Stock'),
+                      Opcion<_Metrica>(
+                        valor: _Metrica.producido,
+                        texto: 'Produjo',
+                      ),
+                      Opcion<_Metrica>(valor: _Metrica.salido, texto: 'Salió'),
+                      Opcion<_Metrica>(valor: _Metrica.merma, texto: 'Merma'),
+                    ],
+                    elegida: _metrica,
+                    alElegir: (_Metrica metrica) =>
+                        setState(() => _metrica = metrica),
+                  ),
+                  const SizedBox(height: 12),
+                  _PorSabor(medidas: medidas, vista: _vistas[_metrica]!),
+                  const SizedBox(height: 22),
+                  const Titulo('A dónde fue el producto'),
+                  const SizedBox(height: 10),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Barras(
+                        vacio: 'No salió producto en este periodo.',
+                        datos: <FilaBarra>[
+                          for (final SalidaPorCanal canal
+                              in medidas.salidasPorCanal)
+                            FilaBarra(
+                              rotulo: Etiquetas.tipoSalida[canal.tipo] ??
+                                  canal.tipo,
+                              valor: canal.cantidad,
+                              apunte:
+                                  '${_parte(canal.cantidad, medidas.salidas)}%',
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+            const Titulo('Lo último que pasó'),
+            const SizedBox(height: 10),
+            _Recientes(panel: datos),
+          ],
+        ),
+      ),
     );
   }
+
+  String _parte(int cantidad, int total) =>
+      total == 0 ? '0' : (cantidad / total * 100).toStringAsFixed(0);
 }
 
 class _Cabecera extends StatelessWidget {
@@ -174,19 +213,17 @@ class _Cabecera extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             children: <Widget>[
-              const Icon(
-                Icons.schedule,
-                size: 16,
-                color: Paleta.superficie,
-              ),
+              const Icon(Icons.schedule, size: 16, color: Paleta.superficie),
               const SizedBox(width: 8),
-              Text(
-                cobertura == null
-                    ? 'Sin salidas en el periodo para estimar duración'
-                    : 'Alcanzan para unos $cobertura días al ritmo actual',
-                style: const TextStyle(
-                  color: Paleta.superficie,
-                  fontSize: 13,
+              Expanded(
+                child: Text(
+                  cobertura == null
+                      ? 'Sin salidas en el periodo para estimar duración'
+                      : 'Alcanzan para unos $cobertura días al ritmo actual',
+                  style: const TextStyle(
+                    color: Paleta.superficie,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ],
@@ -213,7 +250,9 @@ class _Alertas extends ConsumerWidget {
             valor: '${panel.aReponer.length}',
             detalle: panel.aReponer.isEmpty
                 ? 'Todo por encima del mínimo'
-                : panel.aReponer.map((StockSabor s) => s.nombre).join(', '),
+                : panel.aReponer
+                    .map((StockSabor sabor) => sabor.nombre)
+                    .join(', '),
             tono: panel.aReponer.isEmpty ? Paleta.hoja : Paleta.aguajeVivo,
             alTocar: () =>
                 ref.read(moduloProvider.notifier).abrir(Modulo.inventario),
@@ -258,42 +297,40 @@ class _Aviso extends StatelessWidget {
   final VoidCallback alTocar;
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: alTocar,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Icon(icono, size: 18, color: tono),
-                  const SizedBox(width: 8),
-                  Expanded(child: Rotulo(rotulo)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Cifra(valor, tamano: 32, tono: tono),
-              const SizedBox(height: 6),
-              Text(
-                detalle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Paleta.tenue, fontSize: 12),
-              ),
-            ],
+  Widget build(BuildContext context) => Card(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: alTocar,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Icon(icono, size: 18, color: tono),
+                    const SizedBox(width: 8),
+                    Expanded(child: Rotulo(rotulo)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Cifra(valor, tamano: 32, tono: tono),
+                const SizedBox(height: 6),
+                Text(
+                  detalle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Paleta.tenue, fontSize: 12),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
+      );
 }
 
-class _Indicadores extends StatelessWidget {
-  const _Indicadores({required this.medidas});
+class _Kpis extends StatelessWidget {
+  const _Kpis({required this.medidas});
 
   final Indicadores medidas;
 
@@ -302,7 +339,7 @@ class _Indicadores extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        _Titulo('Los últimos ${medidas.dias} días'),
+        Titulo('Los últimos ${medidas.dias} días'),
         const SizedBox(height: 10),
         Row(
           children: <Widget>[
@@ -347,14 +384,6 @@ class _Indicadores extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 22),
-        const _Titulo('A dónde fue el producto'),
-        const SizedBox(height: 10),
-        _Canales(canales: medidas.salidasPorCanal, total: medidas.salidas),
-        const SizedBox(height: 22),
-        const _Titulo('Movimiento por sabor'),
-        const SizedBox(height: 10),
-        _Sabores(sabores: medidas.sabores),
       ],
     );
   }
@@ -401,215 +430,122 @@ class _Kpi extends StatelessWidget {
       );
 }
 
-class _Canales extends StatelessWidget {
-  const _Canales({required this.canales, required this.total});
+class _PorSabor extends StatelessWidget {
+  const _PorSabor({required this.medidas, required this.vista});
 
-  final List<SalidaPorCanal> canales;
-  final int total;
+  final Indicadores medidas;
+  final _Vista vista;
 
   @override
   Widget build(BuildContext context) {
-    if (canales.isEmpty) {
-      return const Card(
-        child: Vacio('No salió producto en este periodo.'),
+    final List<IndicadorSabor> ordenados = <IndicadorSabor>[...medidas.sabores]
+      ..sort(
+        (IndicadorSabor a, IndicadorSabor b) =>
+            vista.valor(b).compareTo(vista.valor(a)),
       );
-    }
-
-    final int mayor = canales
-        .map((SalidaPorCanal canal) => canal.cantidad)
-        .reduce((int a, int b) => a > b ? a : b);
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            for (final SalidaPorCanal canal in canales)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            Etiquetas.tipoSalida[canal.tipo] ?? canal.tipo,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Paleta.tinta,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '${miles(canal.cantidad)} · ${_parte(canal.cantidad)}%',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Paleta.tenue,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        value: mayor == 0 ? 0 : canal.cantidad / mayor,
-                        minHeight: 9,
-                        backgroundColor: Paleta.hundido,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          Paleta.marino,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _parte(int cantidad) =>
-      total == 0 ? '0' : (cantidad / total * 100).toStringAsFixed(0);
-}
-
-class _Sabores extends StatelessWidget {
-  const _Sabores({required this.sabores});
-
-  final List<IndicadorSabor> sabores;
-
-  @override
-  Widget build(BuildContext context) {
-    if (sabores.isEmpty) {
-      return const Card(child: Vacio('No hay sabores activos.'));
-    }
-
-    final int tope = sabores
-        .map((IndicadorSabor sabor) =>
-            sabor.producido > sabor.salido ? sabor.producido : sabor.salido)
-        .fold(1, (int mayor, int valor) => valor > mayor ? valor : mayor);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          children: <Widget>[
-            for (final IndicadorSabor sabor in sabores)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            sabor.nombre,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Paleta.tinta,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Etiqueta(
-                          sabor.cobertura == null
-                              ? '${miles(sabor.stock)} en stock'
-                              : '${sabor.cobertura} días',
-                          tono: tonoDelEstado(sabor.estado),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    _Doble(
-                      rotulo: 'Produjo',
-                      valor: sabor.producido,
-                      tope: tope,
-                      tono: Paleta.marino,
-                    ),
-                    const SizedBox(height: 5),
-                    _Doble(
-                      rotulo: 'Salió',
-                      valor: sabor.salido,
-                      tope: tope,
-                      tono: Paleta.helado,
-                    ),
-                    if (sabor.merma > 0) ...<Widget>[
-                      const SizedBox(height: 5),
-                      _Doble(
-                        rotulo: 'Merma',
-                        valor: sabor.merma,
-                        tope: tope,
-                        tono: Paleta.granate,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Doble extends StatelessWidget {
-  const _Doble({
-    required this.rotulo,
-    required this.valor,
-    required this.tope,
-    required this.tono,
-  });
-
-  final String rotulo;
-  final int valor;
-  final int tope;
-  final Color tono;
-
-  @override
-  Widget build(BuildContext context) => Row(
-        children: <Widget>[
-          SizedBox(
-            width: 54,
-            child: Text(
-              rotulo,
-              style: const TextStyle(fontSize: 11, color: Paleta.tenue),
-            ),
-          ),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                value: tope == 0 ? 0 : valor / tope,
-                minHeight: 7,
-                backgroundColor: Paleta.hundido,
-                valueColor: AlwaysStoppedAnimation<Color>(tono),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 52,
-            child: Text(
-              miles(valor),
-              textAlign: TextAlign.right,
+            Text(
+              vista.titulo,
               style: const TextStyle(
-                fontSize: 12,
-                color: Paleta.tinta,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
+                color: Paleta.tinta,
               ),
             ),
-          ),
-        ],
-      );
+            const SizedBox(height: 4),
+            Text(
+              vista.apunte,
+              style: const TextStyle(color: Paleta.tenue, fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+            Barras(
+              vacio: 'No hay nada que mostrar en este periodo.',
+              datos: <FilaBarra>[
+                for (final IndicadorSabor sabor in ordenados)
+                  if (vista.valor(sabor) > 0)
+                    FilaBarra(
+                      rotulo: sabor.nombre,
+                      valor: vista.valor(sabor),
+                      apunte: sabor.cobertura == null
+                          ? null
+                          : '${sabor.cobertura} d',
+                      tono: vista.tono,
+                    ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _Titulo extends StatelessWidget {
-  const _Titulo(this.texto);
+class _Recientes extends ConsumerWidget {
+  const _Recientes({required this.panel});
+
+  final Panel panel;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      child: Column(
+        children: <Widget>[
+          for (final Salida salida in panel.salidasRecientes.take(4))
+            ListTile(
+              leading: const Icon(
+                Icons.local_shipping_outlined,
+                color: Paleta.marino,
+              ),
+              title: Text(salida.destino ?? 'Salida sin destino'),
+              subtitle: Text(
+                '${fechaCorta(salida.fecha)} · ${Etiquetas.tipoSalida[salida.tipo] ?? salida.tipo}',
+              ),
+              trailing: Text(
+                '${miles(salida.cantidadTotal)} p.',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Paleta.tinta,
+                ),
+              ),
+              onTap: () =>
+                  ref.read(moduloProvider.notifier).abrir(Modulo.salidas),
+            ),
+          for (final Merma merma in panel.mermasRecientes.take(3))
+            ListTile(
+              leading: const Icon(
+                Icons.report_gmailerrorred_outlined,
+                color: Paleta.granate,
+              ),
+              title: Text(merma.sabor),
+              subtitle: Text(
+                '${fechaCorta(merma.fecha)} · ${merma.causa}',
+              ),
+              trailing: Text(
+                '-${miles(merma.cantidad)}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Paleta.granate,
+                ),
+              ),
+              onTap: () =>
+                  ref.read(moduloProvider.notifier).abrir(Modulo.mermas),
+            ),
+          if (panel.salidasRecientes.isEmpty && panel.mermasRecientes.isEmpty)
+            const Vacio('Todavía no hay movimientos registrados.'),
+        ],
+      ),
+    );
+  }
+}
+
+class Titulo extends StatelessWidget {
+  const Titulo(this.texto, {super.key});
 
   final String texto;
 
