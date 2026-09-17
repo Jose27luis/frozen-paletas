@@ -132,35 +132,13 @@ class _Resumen extends StatelessWidget {
             .map((Lote lote) => diasDesde(lote.fechaProduccion))
             .reduce((int a, int b) => a > b ? a : b);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Rotulo('Paletas en estos lotes'),
-                  const SizedBox(height: 4),
-                  Cifra(miles(paletas), tamano: 30),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: <Widget>[
-                Etiqueta('${lotes.length} lotes', tono: Paleta.marino),
-                const SizedBox(height: 8),
-                Etiqueta(
-                  'el más viejo, $masViejo d',
-                  tono: masViejo >= 30 ? Paleta.aguajeVivo : Paleta.tenue,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return Cabecera(
+      rotulo: 'Paletas en estos lotes',
+      valor: miles(paletas),
+      apunte: masViejo == 0
+          ? 'Todos producidos hoy'
+          : 'El más viejo tiene $masViejo días',
+      derecha: <Widget>[Insignia('${lotes.length} lotes')],
     );
   }
 }
