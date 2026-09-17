@@ -9,11 +9,13 @@ abstract final class Paleta {
   static const Color tinta = Color(0xFF14314F);
   static const Color tenue = Color(0xFF5F7894);
   static const Color helado = Color(0xFF16B6C1);
+  static const Color heladoHondo = Color(0xFF0B757D);
   static const Color marino = Color(0xFF1B4E82);
   static const Color hoja = Color(0xFF0F7A57);
   static const Color aguaje = Color(0xFFA45C06);
   static const Color aguajeVivo = Color(0xFFCF8B06);
   static const Color granate = Color(0xFFC81432);
+  static const Color uva = Color(0xFF6B3FA0);
 }
 
 abstract final class Tema {
@@ -32,11 +34,16 @@ abstract final class Tema {
       scaffoldBackgroundColor: Paleta.fondo,
       fontFamily: 'Roboto',
       appBarTheme: const AppBarTheme(
-        backgroundColor: Paleta.superficie,
-        foregroundColor: Paleta.tinta,
+        backgroundColor: Paleta.marino,
+        foregroundColor: Paleta.superficie,
         elevation: 0,
-        scrolledUnderElevation: 1,
+        scrolledUnderElevation: 0,
         centerTitle: false,
+        titleTextStyle: TextStyle(
+          color: Paleta.superficie,
+          fontSize: 19,
+          fontWeight: FontWeight.w700,
+        ),
       ),
       cardTheme: CardThemeData(
         color: Paleta.superficie,
