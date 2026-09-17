@@ -48,12 +48,10 @@ class _PantallaProduccionState extends ConsumerState<PantallaProduccion> {
         ],
       ),
       flotante: puede
-          ? FloatingActionButton.extended(
-              backgroundColor: Paleta.marino,
-              foregroundColor: Paleta.superficie,
-              onPressed: () => _registrar(context),
-              icon: const Icon(Icons.add),
-              label: const Text('Registrar'),
+          ? Boton(
+              icono: Icons.add,
+              texto: 'Registrar',
+              alTocar: () => _registrar(context),
             )
           : null,
       cuerpo: _vista == _Vista.pendientes
