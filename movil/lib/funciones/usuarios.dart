@@ -48,12 +48,10 @@ class _PantallaUsuariosState extends ConsumerState<PantallaUsuarios> {
         ],
       ),
       flotante: _vista == _Vista.gente
-          ? FloatingActionButton.extended(
-              backgroundColor: Paleta.marino,
-              foregroundColor: Paleta.superficie,
-              onPressed: () => _editar(context, ref, null),
-              icon: const Icon(Icons.person_add_alt),
-              label: const Text('Dar de alta'),
+          ? Boton(
+              icono: Icons.person_add_alt,
+              texto: 'Nuevo usuario',
+              alTocar: () => _editar(context, ref, null),
             )
           : null,
       cuerpo: _vista == _Vista.gente ? _gente() : const _Permisos(),
