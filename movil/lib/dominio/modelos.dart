@@ -161,39 +161,49 @@ class Produccion {
   const Produccion({
     required this.id,
     required this.fecha,
+    required this.saborId,
     required this.sabor,
     required this.cantidadObtenida,
     required this.cantidadEmbolsada,
+    required this.merma,
     required this.estado,
     required this.lote,
     required this.responsable,
+    required this.motivoAnulacion,
   });
 
   factory Produccion.desdeJson(Map<String, Object?> json) => Produccion(
         id: json['id']! as String,
         fecha: json['fecha']! as String,
+        saborId: json['saborId']! as String,
         sabor: json['sabor']! as String,
         cantidadObtenida: json['cantidadObtenida']! as int,
         cantidadEmbolsada: json['cantidadEmbolsada'] as int?,
+        merma: json['merma'] as int?,
         estado: json['estado']! as String,
         lote: json['lote'] as String?,
         responsable: json['responsable']! as String,
+        motivoAnulacion: json['motivoAnulacion'] as String?,
       );
 
   final String id;
   final String fecha;
+  final String saborId;
   final String sabor;
   final int cantidadObtenida;
   final int? cantidadEmbolsada;
+  final int? merma;
   final String estado;
   final String? lote;
   final String responsable;
+  final String? motivoAnulacion;
 }
 
 class Lote {
   const Lote({
     required this.id,
     required this.codigo,
+    required this.saborId,
     required this.sabor,
     required this.fechaProduccion,
     required this.cantidadIngresada,
@@ -205,6 +215,7 @@ class Lote {
   factory Lote.desdeJson(Map<String, Object?> json) => Lote(
         id: json['id']! as String,
         codigo: json['codigo']! as String,
+        saborId: json['saborId']! as String,
         sabor: json['sabor']! as String,
         fechaProduccion: json['fechaProduccion']! as String,
         cantidadIngresada: json['cantidadIngresada']! as int,
@@ -215,6 +226,7 @@ class Lote {
 
   final String id;
   final String codigo;
+  final String saborId;
   final String sabor;
   final String fechaProduccion;
   final int cantidadIngresada;
@@ -224,17 +236,57 @@ class Lote {
 }
 
 class Destino {
-  const Destino({required this.id, required this.tipo, required this.nombre});
+  const Destino({
+    required this.id,
+    required this.tipo,
+    required this.nombre,
+    required this.direccion,
+    required this.telefono,
+    required this.activo,
+  });
 
   factory Destino.desdeJson(Map<String, Object?> json) => Destino(
         id: json['id']! as String,
         tipo: json['tipo']! as String,
         nombre: json['nombre']! as String,
+        direccion: json['direccion'] as String?,
+        telefono: json['telefono'] as String?,
+        activo: json['activo'] as bool? ?? true,
       );
 
   final String id;
   final String tipo;
   final String nombre;
+  final String? direccion;
+  final String? telefono;
+  final bool activo;
+}
+
+class SalidaDetalle {
+  const SalidaDetalle({
+    required this.saborId,
+    required this.sabor,
+    required this.lote,
+    required this.cantidad,
+    required this.precioUnitario,
+    required this.loteManual,
+  });
+
+  factory SalidaDetalle.desdeJson(Map<String, Object?> json) => SalidaDetalle(
+        saborId: json['saborId']! as String,
+        sabor: json['sabor']! as String,
+        lote: json['lote']! as String,
+        cantidad: json['cantidad']! as int,
+        precioUnitario: json['precioUnitario'] as String?,
+        loteManual: json['loteManual']! as bool,
+      );
+
+  final String saborId;
+  final String sabor;
+  final String lote;
+  final int cantidad;
+  final String? precioUnitario;
+  final bool loteManual;
 }
 
 class Salida {
@@ -242,29 +294,41 @@ class Salida {
     required this.id,
     required this.fecha,
     required this.tipo,
+    required this.listaPrecios,
     required this.destino,
     required this.motivo,
     required this.cantidadTotal,
     required this.importe,
+    required this.usuario,
+    required this.detalles,
   });
 
   factory Salida.desdeJson(Map<String, Object?> json) => Salida(
         id: json['id']! as String,
         fecha: json['fecha']! as String,
         tipo: json['tipo']! as String,
+        listaPrecios: json['listaPrecios']! as String,
         destino: json['destino'] as String?,
         motivo: json['motivo'] as String?,
         cantidadTotal: json['cantidadTotal']! as int,
         importe: json['importe']! as String,
+        usuario: json['usuario']! as String,
+        detalles: ((json['detalles'] as List<Object?>?) ?? <Object?>[])
+            .map((Object? fila) =>
+                SalidaDetalle.desdeJson(fila! as Map<String, Object?>))
+            .toList(growable: false),
       );
 
   final String id;
   final String fecha;
   final String tipo;
+  final String listaPrecios;
   final String? destino;
   final String? motivo;
   final int cantidadTotal;
   final String importe;
+  final String usuario;
+  final List<SalidaDetalle> detalles;
 }
 
 class CausaMerma {
@@ -273,6 +337,7 @@ class CausaMerma {
     required this.nombre,
     required this.requiereDescripcion,
     required this.activa,
+    required this.usos,
   });
 
   factory CausaMerma.desdeJson(Map<String, Object?> json) => CausaMerma(
@@ -280,45 +345,178 @@ class CausaMerma {
         nombre: json['nombre']! as String,
         requiereDescripcion: json['requiereDescripcion']! as bool,
         activa: json['activa']! as bool,
+        usos: json['usos'] as int? ?? 0,
       );
 
   final String id;
   final String nombre;
   final bool requiereDescripcion;
   final bool activa;
+  final int usos;
+
+  bool get sePuedeEliminar => usos == 0;
 }
 
 class Merma {
   const Merma({
     required this.id,
     required this.fecha,
+    required this.saborId,
     required this.sabor,
     required this.lote,
     required this.cantidad,
     required this.causa,
     required this.origen,
+    required this.observacion,
+    required this.descontoStock,
     required this.responsable,
   });
 
   factory Merma.desdeJson(Map<String, Object?> json) => Merma(
         id: json['id']! as String,
         fecha: json['fecha']! as String,
+        saborId: json['saborId']! as String,
         sabor: json['sabor']! as String,
         lote: json['lote'] as String?,
         cantidad: json['cantidad']! as int,
         causa: json['causa']! as String,
         origen: json['origen']! as String,
+        observacion: json['observacion'] as String?,
+        descontoStock: json['descontoStock'] as bool? ?? false,
         responsable: json['responsable']! as String,
       );
 
   final String id;
   final String fecha;
+  final String saborId;
   final String sabor;
   final String? lote;
   final int cantidad;
   final String causa;
   final String origen;
+  final String? observacion;
+  final bool descontoStock;
   final String responsable;
+}
+
+class Movimiento {
+  const Movimiento({
+    required this.id,
+    required this.tipo,
+    required this.fecha,
+    required this.sabor,
+    required this.lote,
+    required this.cantidad,
+    required this.usuario,
+    required this.motivo,
+  });
+
+  factory Movimiento.desdeJson(Map<String, Object?> json) => Movimiento(
+        id: json['id']! as String,
+        tipo: json['tipo']! as String,
+        fecha: json['fecha']! as String,
+        sabor: json['sabor']! as String,
+        lote: json['lote'] as String?,
+        cantidad: json['cantidad']! as int,
+        usuario: json['usuario']! as String,
+        motivo: json['motivo'] as String?,
+      );
+
+  final String id;
+  final String tipo;
+  final String fecha;
+  final String sabor;
+  final String? lote;
+  final int cantidad;
+  final String usuario;
+  final String? motivo;
+
+  bool get entra => cantidad > 0;
+}
+
+class MermaPorCausa {
+  const MermaPorCausa({
+    required this.causa,
+    required this.cantidad,
+    required this.registros,
+  });
+
+  factory MermaPorCausa.desdeJson(Map<String, Object?> json) => MermaPorCausa(
+        causa: json['causa']! as String,
+        cantidad: json['cantidad']! as int,
+        registros: json['registros']! as int,
+      );
+
+  final String causa;
+  final int cantidad;
+  final int registros;
+}
+
+class MermaPorSabor {
+  const MermaPorSabor({required this.sabor, required this.cantidad});
+
+  factory MermaPorSabor.desdeJson(Map<String, Object?> json) => MermaPorSabor(
+        sabor: json['sabor']! as String,
+        cantidad: json['cantidad']! as int,
+      );
+
+  final String sabor;
+  final int cantidad;
+}
+
+class ResumenMermas {
+  const ResumenMermas({
+    required this.total,
+    required this.enAlmacen,
+    required this.enProceso,
+    required this.porCausa,
+    required this.porSabor,
+  });
+
+  factory ResumenMermas.desdeJson(Map<String, Object?> json) => ResumenMermas(
+        total: json['total']! as int,
+        enAlmacen: json['enAlmacen']! as int,
+        enProceso: json['enProceso']! as int,
+        porCausa: (json['porCausa']! as List<Object?>)
+            .map((Object? fila) =>
+                MermaPorCausa.desdeJson(fila! as Map<String, Object?>))
+            .toList(growable: false),
+        porSabor: (json['porSabor']! as List<Object?>)
+            .map((Object? fila) =>
+                MermaPorSabor.desdeJson(fila! as Map<String, Object?>))
+            .toList(growable: false),
+      );
+
+  final int total;
+  final int enAlmacen;
+  final int enProceso;
+  final List<MermaPorCausa> porCausa;
+  final List<MermaPorSabor> porSabor;
+}
+
+class Permiso {
+  const Permiso({
+    required this.clave,
+    required this.nombre,
+    required this.descripcion,
+    required this.roles,
+  });
+
+  factory Permiso.desdeJson(Map<String, Object?> json) => Permiso(
+        clave: json['clave']! as String,
+        nombre: json['nombre']! as String,
+        descripcion: json['descripcion']! as String,
+        roles: (json['roles']! as List<Object?>)
+            .map((Object? rol) => rol! as String)
+            .toList(growable: false),
+      );
+
+  final String clave;
+  final String nombre;
+  final String descripcion;
+  final List<String> roles;
+
+  bool lotiene(String rol) => roles.contains(rol);
 }
 
 class Panel {
@@ -577,5 +775,12 @@ abstract final class Etiquetas {
     'OPERACIONES': 'Operaciones',
     'PRODUCCION': 'Producción',
     'CONSULTA': 'Consulta',
+  };
+
+  static const Map<String, String> tipoMovimiento = <String, String>{
+    'INGRESO_PRODUCCION': 'Ingreso por embolsado',
+    'SALIDA': 'Salida',
+    'MERMA': 'Merma',
+    'AJUSTE': 'Ajuste de inventario',
   };
 }
