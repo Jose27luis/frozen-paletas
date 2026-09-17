@@ -746,8 +746,22 @@ No hace falta desarrollar todos los módulos completos desde el primer día.
 | `backend/src/generated/prisma/` | Cliente de Prisma generado, no se commitea |
 | `frontend/` | Panel web en Angular |
 | `movil/` | App Flutter |
+| `movil/lib/datos/repos/` | Un repositorio por módulo, el mismo corte que el backend |
+| `movil/lib/ui/` | Piezas compartidas: pantalla, filtros, barras, hoja de detalle |
 | `infra/` | Compilación del APK en Docker y despliegue |
 | `test/` | Pruebas del sistema |
+
+## La app sin señal
+
+El galpón no siempre tiene cobertura, así que la app no pierde lo que se anota ahí.
+
+Producción, embolsado, salidas y mermas pasan por un escritor único. Si el envío falla por red o por un 5xx, la operación **entera** queda guardada cifrada en el celular y la app avisa con una franja en la cabecera. Al volver a entrar o al retomar la app se mandan en el mismo orden en que se anotaron.
+
+Una salida de cinco sabores es una sola operación y un solo `POST`: o entran los cinco descuentos de stock o no entra ninguno. Nunca se parte en cinco envíos.
+
+Las tres operaciones del libro llevan clave de idempotencia, así que reenviarlas no duplica nada. El embolsado no la necesita porque el backend rechaza una producción que ya está embolsada. Lo que el servidor rechaza no se reintenta solo: queda apartado con su motivo para que alguien decida si lo corrige o lo descarta.
+
+Las altas y ediciones de catálogo (sabores, usuarios, destinos, causas, permisos) **no** se encolan: necesitan la respuesta del servidor y no son trabajo de campo.
 
 ## Despliegue
 
