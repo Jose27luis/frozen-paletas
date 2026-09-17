@@ -25,6 +25,14 @@ String hoyEnIso() {
   return DateFormat('yyyy-MM-dd').format(ahora);
 }
 
+String haceDias(int dias) {
+  final DateTime hoy = DateTime.parse('${hoyEnIso()}T00:00:00Z');
+
+  return DateFormat('yyyy-MM-dd').format(
+    hoy.subtract(Duration(days: dias - 1)),
+  );
+}
+
 int diasDesde(String iso) {
   final DateTime fecha = DateTime.parse(iso).toUtc();
   final DateTime hoy = DateTime.parse('${hoyEnIso()}T00:00:00Z');
