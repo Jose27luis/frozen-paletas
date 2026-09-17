@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../nucleo/proveedores.dart';
 import '../nucleo/tema.dart';
 
 class Opcion<T> {
@@ -9,7 +11,7 @@ class Opcion<T> {
   final String texto;
 }
 
-class FilaDeChips<T> extends StatelessWidget {
+class FilaDeChips<T> extends ConsumerWidget {
   const FilaDeChips({
     required this.opciones,
     required this.elegida,
@@ -22,7 +24,9 @@ class FilaDeChips<T> extends StatelessWidget {
   final ValueChanged<T> alElegir;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final Color tono = ref.watch(moduloProvider).tono;
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -31,21 +35,11 @@ class FilaDeChips<T> extends StatelessWidget {
           for (final Opcion<T> opcion in opciones)
             Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                label: Text(opcion.texto),
-                selected: opcion.valor == elegida,
-                showCheckmark: false,
-                selectedColor: Paleta.marino,
-                backgroundColor: Paleta.hundido,
-                side: BorderSide.none,
-                labelStyle: TextStyle(
-                  color: opcion.valor == elegida
-                      ? Paleta.superficie
-                      : Paleta.tenue,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-                onSelected: (bool _) => alElegir(opcion.valor),
+              child: _Chip(
+                texto: opcion.texto,
+                activo: opcion.valor == elegida,
+                tono: tono,
+                alTocar: () => alElegir(opcion.valor),
               ),
             ),
         ],
@@ -54,16 +48,77 @@ class FilaDeChips<T> extends StatelessWidget {
   }
 }
 
+class _Chip extends StatelessWidget {
+  const _Chip({
+    required this.texto,
+    required this.activo,
+    required this.tono,
+    required this.alTocar,
+  });
+
+  final String texto;
+  final bool activo;
+  final Color tono;
+  final VoidCallback alTocar;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: alTocar,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+            decoration: BoxDecoration(
+              color: activo ? tono : tono.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: activo ? tono : tono.withValues(alpha: 0.24),
+              ),
+            ),
+            child: Text(
+              texto,
+              style: TextStyle(
+                color: activo ? Paleta.superficie : tono,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ),
+      );
+}
+
+class Interruptor extends ConsumerWidget {
+  const Interruptor({
+    required this.texto,
+    required this.activo,
+    required this.alTocar,
+    super.key,
+  });
+
+  final String texto;
+  final bool activo;
+  final ValueChanged<bool> alTocar;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => _Chip(
+        texto: texto,
+        activo: activo,
+        tono: ref.watch(moduloProvider).tono,
+        alTocar: () => alTocar(!activo),
+      );
+}
+
 class BarraDeFiltros extends StatelessWidget {
   const BarraDeFiltros({required this.children, super.key});
 
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        color: Paleta.superficie,
-        padding: const EdgeInsets.fromLTRB(0, 10, 0, 12),
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(0, 12, 0, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: children,
