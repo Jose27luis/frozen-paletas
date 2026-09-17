@@ -41,7 +41,7 @@ class PantallaProduccion extends ConsumerWidget {
         data: (List<Produccion> filas) => RefreshIndicator(
           onRefresh: () async => refrescarTodo(ref),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+            padding: margenDeLista(context, abajo: 96),
             children: <Widget>[
               const Text(
                 'Falta embolsar',
@@ -81,12 +81,8 @@ class PantallaProduccion extends ConsumerWidget {
       showModalBottomSheet<void>(
         context: contexto,
         isScrollControlled: true,
-        builder: (BuildContext hoja) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(hoja).viewInsets.bottom,
-          ),
-          child: const _FormularioProduccion(),
-        ),
+        builder: (BuildContext hoja) =>
+            const Hoja(child: _FormularioProduccion()),
       );
 }
 
@@ -358,7 +354,7 @@ class _FormularioProduccionState extends ConsumerState<_FormularioProduccion> {
   Widget build(BuildContext context) {
     final AsyncValue<List<Sabor>> sabores = ref.watch(saboresProvider);
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
