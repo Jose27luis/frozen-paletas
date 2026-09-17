@@ -52,17 +52,15 @@ class PantallaSalidas extends ConsumerWidget {
         ],
       ),
       flotante: puede
-          ? FloatingActionButton.extended(
-              backgroundColor: Paleta.marino,
-              foregroundColor: Paleta.superficie,
-              onPressed: () => showModalBottomSheet<void>(
+          ? Boton(
+              icono: Icons.add,
+              texto: 'Nueva salida',
+              alTocar: () => showModalBottomSheet<void>(
                 context: context,
                 isScrollControlled: true,
                 builder: (BuildContext hoja) =>
                     const Hoja(child: _FormularioSalida()),
               ),
-              icon: const Icon(Icons.add),
-              label: const Text('Registrar'),
             )
           : null,
       cuerpo: Cargado<List<Salida>>(
@@ -155,36 +153,11 @@ class _Resumen extends StatelessWidget {
           suma + (double.tryParse(salida.importe) ?? 0),
     );
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Rotulo('Paletas despachadas'),
-                  const SizedBox(height: 4),
-                  Cifra(miles(paletas), tamano: 30),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: <Widget>[
-                const Rotulo('Importe'),
-                const SizedBox(height: 4),
-                Cifra(
-                  soles(importe.toStringAsFixed(2)),
-                  tamano: 22,
-                  tono: Paleta.hoja,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return Cabecera(
+      rotulo: 'Paletas despachadas',
+      valor: miles(paletas),
+      apunte: '${salidas.length} ${salidas.length == 1 ? 'salida' : 'salidas'} en el filtro',
+      derecha: <Widget>[Insignia(soles(importe.toStringAsFixed(2)))],
     );
   }
 }
