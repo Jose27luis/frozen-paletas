@@ -1,7 +1,11 @@
 import 'package:dio/dio.dart';
 
 class FalloApi implements Exception {
-  const FalloApi(this.mensaje, {this.sesionExpirada = false});
+  const FalloApi(
+    this.mensaje, {
+    this.sesionExpirada = false,
+    this.sinConexion = false,
+  });
 
   factory FalloApi.inesperado(Object error, String respaldo) {
     if (error is FalloApi) {
@@ -18,14 +22,18 @@ class FalloApi implements Exception {
   factory FalloApi.desde(DioException error, String respaldo) {
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
         error.type == DioExceptionType.receiveTimeout) {
-      return const FalloApi('No hay conexión con el servidor');
+      return const FalloApi(
+        'No hay conexión con el servidor',
+        sinConexion: true,
+      );
     }
 
     final Response<Object?>? respuesta = error.response;
 
     if (respuesta == null) {
-      return FalloApi(respaldo);
+      return FalloApi(respaldo, sinConexion: true);
     }
 
     if (respuesta.statusCode == 401) {
@@ -35,11 +43,17 @@ class FalloApi implements Exception {
       );
     }
 
-    return FalloApi(_mensajeDelCuerpo(respuesta.data) ?? respaldo);
+    final int codigo = respuesta.statusCode ?? 500;
+
+    return FalloApi(
+      _mensajeDelCuerpo(respuesta.data) ?? respaldo,
+      sinConexion: codigo >= 500,
+    );
   }
 
   final String mensaje;
   final bool sesionExpirada;
+  final bool sinConexion;
 
   static String? _mensajeDelCuerpo(Object? cuerpo) {
     if (cuerpo is! Map<String, Object?>) {
