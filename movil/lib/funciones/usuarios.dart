@@ -2,66 +2,209 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../datos/fallo_api.dart';
-import '../datos/repositorio.dart';
+import '../datos/repos/usuarios_repo.dart';
 import '../dominio/modelos.dart';
 import '../nucleo/proveedores.dart';
 import '../nucleo/tema.dart';
-import '../ui/menu_lateral.dart';
+import '../ui/filtros.dart';
+import '../ui/pantalla.dart';
 import '../ui/piezas.dart';
 
-class PantallaUsuarios extends ConsumerWidget {
+enum _Vista { gente, permisos }
+
+class PantallaUsuarios extends ConsumerStatefulWidget {
   const PantallaUsuarios({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PantallaUsuarios> createState() => _PantallaUsuariosState();
+}
+
+class _PantallaUsuariosState extends ConsumerState<PantallaUsuarios> {
+  _Vista _vista = _Vista.gente;
+
+  @override
+  Widget build(BuildContext context) {
     final Usuario? sesion = ref.watch(sesionProvider).value;
 
     if (!(sesion?.puede(Permisos.administrarUsuarios) ?? false)) {
-      return Scaffold(
-        drawer: const MenuLateral(),
-        appBar: AppBar(title: const Text('Usuarios')),
-        body: const Vacio('Tu rol no administra usuarios.'),
+      return const Pantalla(
+        titulo: 'Usuarios',
+        cuerpo: Vacio('Tu rol no administra usuarios.'),
       );
     }
 
-    final AsyncValue<List<UsuarioListado>> usuarios =
-        ref.watch(usuariosProvider);
-
-    return Scaffold(
-      drawer: const MenuLateral(),
-      appBar: AppBar(title: const Text('Usuarios')),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Paleta.marino,
-        foregroundColor: Paleta.superficie,
-        onPressed: () => _editar(context, ref, null),
-        icon: const Icon(Icons.person_add_alt),
-        label: const Text('Dar de alta'),
+    return Pantalla(
+      titulo: 'Usuarios',
+      filtros: BarraDeFiltros(
+        children: <Widget>[
+          FilaDeChips<_Vista>(
+            opciones: const <Opcion<_Vista>>[
+              Opcion<_Vista>(valor: _Vista.gente, texto: 'Gente'),
+              Opcion<_Vista>(valor: _Vista.permisos, texto: 'Permisos por rol'),
+            ],
+            elegida: _vista,
+            alElegir: (_Vista vista) => setState(() => _vista = vista),
+          ),
+        ],
       ),
-      body: usuarios.when(
-        loading: () => const Cargando(),
-        error: (Object error, StackTrace rastro) => Fallo(
-          mensaje: error.toString(),
-          reintentar: () => ref.invalidate(usuariosProvider),
-        ),
-        data: (List<UsuarioListado> filas) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(usuariosProvider),
-          child: filas.isEmpty
-              ? ListView(
-                  children: const <Widget>[Vacio('No hay usuarios.')],
-                )
-              : ListView.separated(
-                  padding: margenDeLista(context, abajo: 96),
-                  itemCount: filas.length,
-                  separatorBuilder: (BuildContext contexto, int indice) =>
-                      const SizedBox(height: 10),
-                  itemBuilder: (BuildContext contexto, int indice) => _Ficha(
-                    usuario: filas[indice],
-                    alEditar: () => _editar(context, ref, filas[indice]),
-                    alCambiarEstado: () =>
-                        _cambiarEstado(context, ref, filas[indice]),
+      flotante: _vista == _Vista.gente
+          ? FloatingActionButton.extended(
+              backgroundColor: Paleta.marino,
+              foregroundColor: Paleta.superficie,
+              onPressed: () => _editar(context, ref, null),
+              icon: const Icon(Icons.person_add_alt),
+              label: const Text('Dar de alta'),
+            )
+          : null,
+      cuerpo: _vista == _Vista.gente ? _gente() : const _Permisos(),
+    );
+  }
+
+  Widget _gente() => Cargado<List<UsuarioListado>>(
+        valor: ref.watch(usuariosProvider),
+        alRefrescar: () => ref.invalidate(usuariosProvider),
+        construir: (List<UsuarioListado> filas) => filas.isEmpty
+            ? const ListaVacia('No hay usuarios.')
+            : ListView.separated(
+                padding: margenDeLista(context, abajo: 96),
+                itemCount: filas.length,
+                separatorBuilder: (BuildContext contexto, int indice) =>
+                    const SizedBox(height: 10),
+                itemBuilder: (BuildContext contexto, int indice) => _Ficha(
+                  usuario: filas[indice],
+                  alEditar: () => _editar(context, ref, filas[indice]),
+                  alCambiarEstado: () =>
+                      _cambiarEstado(context, ref, filas[indice]),
+                ),
+              ),
+      );
+}
+
+class _Permisos extends ConsumerStatefulWidget {
+  const _Permisos();
+
+  @override
+  ConsumerState<_Permisos> createState() => _PermisosState();
+}
+
+class _PermisosState extends ConsumerState<_Permisos> {
+  String _rol = 'OPERACIONES';
+  bool _guardando = false;
+
+  Future<void> _alternar(Permiso permiso, List<Permiso> todos) async {
+    final List<String> claves = <String>[
+      for (final Permiso cada in todos)
+        if (cada.clave == permiso.clave
+            ? !cada.lotiene(_rol)
+            : cada.lotiene(_rol))
+          cada.clave,
+    ];
+
+    setState(() => _guardando = true);
+
+    try {
+      await ref.read(usuariosRepoProvider).guardarPermisos(_rol, claves);
+
+      ref.invalidate(permisosProvider);
+
+      if (mounted) {
+        avisar(context, 'Permisos guardados');
+      }
+    } on FalloApi catch (fallo) {
+      if (mounted) {
+        avisar(context, fallo.mensaje, error: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _guardando = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool editable = _rol != 'ADMIN';
+
+    return Cargado<List<Permiso>>(
+      valor: ref.watch(permisosProvider),
+      alRefrescar: () => ref.invalidate(permisosProvider),
+      construir: (List<Permiso> permisos) => ListView(
+        padding: margenDeLista(context),
+        children: <Widget>[
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Text(
+                    'Los permisos viven en la base de datos: cambiarlos no '
+                    'obliga a recompilar nada.',
+                    style: TextStyle(color: Paleta.tenue, fontSize: 13),
+                  ),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    initialValue: _rol,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Rol'),
+                    items: <DropdownMenuItem<String>>[
+                      for (final MapEntry<String, String> fila
+                          in Etiquetas.rol.entries)
+                        DropdownMenuItem<String>(
+                          value: fila.key,
+                          child: Text(fila.value),
+                        ),
+                    ],
+                    onChanged: (String? valor) =>
+                        setState(() => _rol = valor ?? _rol),
+                  ),
+                  if (!editable) ...<Widget>[
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Administración conserva todos los permisos y no se '
+                      'edita, para que nadie se quede fuera del sistema.',
+                      style: TextStyle(color: Paleta.aguaje, fontSize: 12),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          for (final Permiso permiso in permisos)
+            Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: SwitchListTile(
+                value: permiso.lotiene(_rol),
+                activeThumbColor: Paleta.marino,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                title: Text(
+                  permiso.nombre,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Paleta.tinta,
                   ),
                 ),
-        ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    permiso.descripcion,
+                    style: const TextStyle(
+                      color: Paleta.tenue,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                onChanged: !editable || _guardando
+                    ? null
+                    : (bool _) => _alternar(permiso, permisos),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -200,12 +343,12 @@ Future<void> _cambiarEstado(
   }
 
   try {
-    final Repositorio repositorio = ref.read(repositorioProvider);
+    final UsuariosRepo repositorio = ref.read(usuariosRepoProvider);
 
     if (usuario.activo) {
-      await repositorio.desactivarUsuario(usuario.id);
+      await repositorio.desactivar(usuario.id);
     } else {
-      await repositorio.reactivarUsuario(usuario.id);
+      await repositorio.reactivar(usuario.id);
     }
 
     ref.invalidate(usuariosProvider);
@@ -291,12 +434,12 @@ class _FormularioState extends ConsumerState<_Formulario> {
 
     try {
       final UsuarioListado? usuario = widget.usuario;
-      final Repositorio repositorio = ref.read(repositorioProvider);
+      final UsuariosRepo repositorio = ref.read(usuariosRepoProvider);
 
       if (usuario == null) {
-        await repositorio.crearUsuario(datos);
+        await repositorio.crear(datos);
       } else {
-        await repositorio.actualizarUsuario(usuario.id, datos);
+        await repositorio.actualizar(usuario.id, datos);
       }
 
       ref.invalidate(usuariosProvider);
