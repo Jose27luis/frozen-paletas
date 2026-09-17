@@ -29,12 +29,8 @@ class PantallaMermas extends ConsumerWidget {
               onPressed: () => showModalBottomSheet<void>(
                 context: context,
                 isScrollControlled: true,
-                builder: (BuildContext hoja) => Padding(
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(hoja).viewInsets.bottom,
-                  ),
-                  child: const _FormularioMerma(),
-                ),
+                builder: (BuildContext hoja) =>
+                    const Hoja(child: _FormularioMerma()),
               ),
               icon: const Icon(Icons.add),
               label: const Text('Registrar'),
@@ -56,7 +52,7 @@ class PantallaMermas extends ConsumerWidget {
                   ],
                 )
               : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                  padding: margenDeLista(context, abajo: 96),
                   itemCount: filas.length,
                   separatorBuilder: (BuildContext contexto, int indice) =>
                       const SizedBox(height: 10),
