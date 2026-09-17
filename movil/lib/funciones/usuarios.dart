@@ -50,7 +50,7 @@ class PantallaUsuarios extends ConsumerWidget {
                   children: const <Widget>[Vacio('No hay usuarios.')],
                 )
               : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                  padding: margenDeLista(context, abajo: 96),
                   itemCount: filas.length,
                   separatorBuilder: (BuildContext contexto, int indice) =>
                       const SizedBox(height: 10),
@@ -228,10 +228,7 @@ Future<void> _editar(
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (BuildContext hoja) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(hoja).viewInsets.bottom),
-      child: _Formulario(usuario: usuario),
-    ),
+    builder: (BuildContext hoja) => Hoja(child: _Formulario(usuario: usuario)),
   );
 }
 
@@ -320,7 +317,7 @@ class _FormularioState extends ConsumerState<_Formulario> {
   Widget build(BuildContext context) {
     final bool nuevo = widget.usuario == null;
 
-    return SafeArea(
+    return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
