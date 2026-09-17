@@ -38,12 +38,54 @@ class AppFrozen extends StatelessWidget {
   }
 }
 
-class _Entrada extends ConsumerWidget {
+class _Entrada extends ConsumerStatefulWidget {
   const _Entrada();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_Entrada> createState() => _EntradaState();
+}
+
+class _EntradaState extends ConsumerState<_Entrada>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState estado) {
+    if (estado == AppLifecycleState.resumed) {
+      _vaciarCola();
+    }
+  }
+
+  void _vaciarCola() {
+    if (ref.read(sesionProvider).value == null) {
+      return;
+    }
+
+    ref.read(pendientesColaProvider.notifier).sincronizar();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final AsyncValue<Usuario?> sesion = ref.watch(sesionProvider);
+
+    ref.listen<AsyncValue<Usuario?>>(sesionProvider, (
+      AsyncValue<Usuario?>? antes,
+      AsyncValue<Usuario?> ahora,
+    ) {
+      if (ahora.value != null) {
+        _vaciarCola();
+      }
+    });
 
     return sesion.when(
       loading: () => const Scaffold(body: Cargando()),
