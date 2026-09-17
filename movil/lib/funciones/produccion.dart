@@ -2,74 +2,208 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../datos/escritor.dart';
 import '../datos/fallo_api.dart';
 import '../dominio/modelos.dart';
 import '../nucleo/formato.dart';
 import '../nucleo/proveedores.dart';
 import '../nucleo/tema.dart';
-import '../ui/menu_lateral.dart';
+import '../ui/detalle.dart';
+import '../ui/filtros.dart';
+import '../ui/pantalla.dart';
 import '../ui/piezas.dart';
 
-class PantallaProduccion extends ConsumerWidget {
+enum _Vista { pendientes, historial }
+
+class PantallaProduccion extends ConsumerStatefulWidget {
   const PantallaProduccion({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<Produccion>> pendientes =
-        ref.watch(pendientesProvider);
+  ConsumerState<PantallaProduccion> createState() => _PantallaProduccionState();
+}
+
+class _PantallaProduccionState extends ConsumerState<PantallaProduccion> {
+  _Vista _vista = _Vista.pendientes;
+
+  @override
+  Widget build(BuildContext context) {
     final Usuario? usuario = ref.watch(sesionProvider).value;
     final bool puede = usuario?.puede(Permisos.registrarProduccion) ?? false;
 
-    return Scaffold(
-      drawer: const MenuLateral(),
-      appBar: AppBar(title: const Text('Producción')),
-      floatingActionButton: puede
+    return Pantalla(
+      titulo: 'Producción',
+      filtros: BarraDeFiltros(
+        children: <Widget>[
+          FilaDeChips<_Vista>(
+            opciones: const <Opcion<_Vista>>[
+              Opcion<_Vista>(
+                valor: _Vista.pendientes,
+                texto: 'Falta embolsar',
+              ),
+              Opcion<_Vista>(valor: _Vista.historial, texto: 'Historial'),
+            ],
+            elegida: _vista,
+            alElegir: (_Vista vista) => setState(() => _vista = vista),
+          ),
+        ],
+      ),
+      flotante: puede
           ? FloatingActionButton.extended(
               backgroundColor: Paleta.marino,
               foregroundColor: Paleta.superficie,
-              onPressed: () => _registrar(context, ref),
+              onPressed: () => _registrar(context),
               icon: const Icon(Icons.add),
               label: const Text('Registrar'),
             )
           : null,
-      body: pendientes.when(
-        loading: () => const Cargando(),
-        error: (Object error, StackTrace rastro) => Fallo(
-          mensaje: error.toString(),
-          reintentar: () => ref.invalidate(pendientesProvider),
-        ),
-        data: (List<Produccion> filas) => RefreshIndicator(
-          onRefresh: () async => refrescarTodo(ref),
-          child: ListView(
-            padding: margenDeLista(context, abajo: 96),
-            children: <Widget>[
-              const Text(
-                'Falta embolsar',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                  color: Paleta.tinta,
+      cuerpo: _vista == _Vista.pendientes
+          ? _pendientes(puede)
+          : _historial(puede),
+    );
+  }
+
+  Widget _pendientes(bool puede) => Cargado<List<Produccion>>(
+        valor: ref.watch(pendientesProvider),
+        alRefrescar: () => ref.invalidate(pendientesProvider),
+        construir: (List<Produccion> filas) => filas.isEmpty
+            ? const ListaVacia(
+                'No hay producciones esperando su conteo de embolsado.',
+              )
+            : ListView.separated(
+                padding: margenDeLista(context, abajo: 96),
+                itemCount: filas.length,
+                separatorBuilder: (BuildContext contexto, int indice) =>
+                    const SizedBox(height: 10),
+                itemBuilder: (BuildContext contexto, int indice) =>
+                    _TarjetaPendiente(
+                  produccion: filas[indice],
+                  puedeEmbolsar: puede,
                 ),
               ),
-              const SizedBox(height: 4),
-              const Text(
-                'Estas producciones todavía no suman al inventario.',
-                style: TextStyle(color: Paleta.tenue),
+      );
+
+  Widget _historial(bool puede) => Cargado<List<Produccion>>(
+        valor: ref.watch(produccionesProvider),
+        alRefrescar: () => ref.invalidate(produccionesProvider),
+        construir: (List<Produccion> filas) => filas.isEmpty
+            ? const ListaVacia('Todavía no se registró ninguna producción.')
+            : ListView.separated(
+                padding: margenDeLista(context, abajo: 96),
+                itemCount: filas.length,
+                separatorBuilder: (BuildContext contexto, int indice) =>
+                    const SizedBox(height: 10),
+                itemBuilder: (BuildContext contexto, int indice) => _FilaHistorial(
+                  produccion: filas[indice],
+                  puedeAnular: puede,
+                ),
               ),
-              const SizedBox(height: 12),
-              if (filas.isEmpty)
-                const Card(
-                  child: Vacio('Todo lo producido ya pasó por el conteo.'),
-                )
-              else
-                for (final Produccion fila in filas)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _TarjetaPendiente(
-                      produccion: fila,
-                      puedeEmbolsar: puede,
+      );
+
+  Future<void> _registrar(BuildContext contexto) => showModalBottomSheet<void>(
+        context: contexto,
+        isScrollControlled: true,
+        builder: (BuildContext hoja) =>
+            const Hoja(child: _FormularioProduccion()),
+      );
+}
+
+class _FilaHistorial extends ConsumerWidget {
+  const _FilaHistorial({required this.produccion, required this.puedeAnular});
+
+  final Produccion produccion;
+  final bool puedeAnular;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final Color tono = _tonoDeLaProduccion(produccion.estado);
+    final bool anulable = puedeAnular && produccion.estado != 'ANULADA';
+
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => _abrir(context, ref),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          produccion.sabor,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Paleta.tinta,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${fechaCorta(produccion.fecha)} · ${produccion.lote ?? 'sin lote'}',
+                          style: const TextStyle(
+                            color: Paleta.tenue,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  Etiqueta(
+                    Etiquetas.estadoProduccion[produccion.estado] ??
+                        produccion.estado,
+                    tono: tono,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _Dato(
+                      rotulo: 'Del balde',
+                      valor: miles(produccion.cantidadObtenida),
+                    ),
+                  ),
+                  Expanded(
+                    child: _Dato(
+                      rotulo: 'Al stock',
+                      valor: produccion.cantidadEmbolsada == null
+                          ? 'pendiente'
+                          : miles(produccion.cantidadEmbolsada!),
+                    ),
+                  ),
+                  Expanded(
+                    child: _Dato(
+                      rotulo: 'Merma',
+                      valor: produccion.merma == null
+                          ? '—'
+                          : miles(produccion.merma!),
+                      tono: (produccion.merma ?? 0) > 0
+                          ? Paleta.granate
+                          : Paleta.tinta,
+                    ),
+                  ),
+                ],
+              ),
+              if (anulable) ...<Widget>[
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: Paleta.granate,
+                    ),
+                    onPressed: () => anularProduccion(context, ref, produccion),
+                    icon: const Icon(Icons.block, size: 18),
+                    label: const Text('Anular'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -77,14 +211,140 @@ class PantallaProduccion extends ConsumerWidget {
     );
   }
 
-  Future<void> _registrar(BuildContext contexto, WidgetRef ref) =>
-      showModalBottomSheet<void>(
-        context: contexto,
-        isScrollControlled: true,
-        builder: (BuildContext hoja) =>
-            const Hoja(child: _FormularioProduccion()),
+  Future<void> _abrir(BuildContext context, WidgetRef ref) => abrirDetalle(
+        context,
+        titulo: produccion.sabor,
+        subtitulo:
+            '${fechaLarga(produccion.fecha)} · ${produccion.lote ?? 'sin lote'}',
+        children: <Widget>[
+          FilaDetalle(
+            rotulo: 'Estado',
+            valor: Etiquetas.estadoProduccion[produccion.estado] ??
+                produccion.estado,
+            tono: _tonoDeLaProduccion(produccion.estado),
+          ),
+          FilaDetalle(
+            rotulo: 'Salió del balde',
+            valor: '${miles(produccion.cantidadObtenida)} paletas',
+          ),
+          FilaDetalle(
+            rotulo: 'Entró al stock',
+            valor: produccion.cantidadEmbolsada == null
+                ? 'Todavía sin embolsar'
+                : '${miles(produccion.cantidadEmbolsada!)} paletas',
+          ),
+          FilaDetalle(
+            rotulo: 'Se perdieron',
+            valor: produccion.merma == null
+                ? '—'
+                : '${miles(produccion.merma!)} paletas',
+            tono: (produccion.merma ?? 0) > 0 ? Paleta.granate : Paleta.tinta,
+          ),
+          FilaDetalle(rotulo: 'Responsable', valor: produccion.responsable),
+          if (produccion.motivoAnulacion != null)
+            FilaDetalle(
+              rotulo: 'Motivo de anulación',
+              valor: produccion.motivoAnulacion!,
+              tono: Paleta.granate,
+            ),
+        ],
       );
 }
+
+Future<void> anularProduccion(
+  BuildContext context,
+  WidgetRef ref,
+  Produccion produccion,
+) async {
+  final TextEditingController motivo = TextEditingController();
+
+  final String? razon = await showDialog<String>(
+    context: context,
+    builder: (BuildContext dialogo) => AlertDialog(
+      title: const Text('Anular la producción'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Se revierte el ingreso de ${produccion.sabor} y su lote queda sin stock. '
+            'El registro no se borra, queda anulado.',
+            style: const TextStyle(color: Paleta.tenue, fontSize: 13),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: motivo,
+            autofocus: true,
+            maxLines: 2,
+            decoration: const InputDecoration(
+              labelText: 'Motivo',
+              helperText: 'Mínimo 5 caracteres',
+            ),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(dialogo).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: Paleta.granate),
+          onPressed: () => Navigator.of(dialogo).pop(motivo.text),
+          child: const Text('Anular'),
+        ),
+      ],
+    ),
+  );
+
+  motivo.dispose();
+
+  if (razon == null || razon.trim().length < 5) {
+    return;
+  }
+
+  try {
+    await ref.read(produccionRepoProvider).anular(produccion.id, razon.trim());
+
+    refrescarDesde(ref);
+
+    if (context.mounted) {
+      avisar(context, 'Producción anulada');
+    }
+  } on FalloApi catch (fallo) {
+    if (context.mounted) {
+      avisar(context, fallo.mensaje, error: true);
+    }
+  }
+}
+
+class _Dato extends StatelessWidget {
+  const _Dato({
+    required this.rotulo,
+    required this.valor,
+    this.tono = Paleta.tinta,
+  });
+
+  final String rotulo;
+  final String valor;
+  final Color tono;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Rotulo(rotulo),
+          const SizedBox(height: 2),
+          Cifra(valor, tamano: 18, tono: tono),
+        ],
+      );
+}
+
+Color _tonoDeLaProduccion(String estado) => switch (estado) {
+      'EMBOLSADA' => Paleta.hoja,
+      'REGISTRADA' => Paleta.aguajeVivo,
+      _ => Paleta.tenue,
+    };
 
 class _TarjetaPendiente extends ConsumerStatefulWidget {
   const _TarjetaPendiente({
@@ -127,15 +387,24 @@ class _TarjetaPendienteState extends ConsumerState<_TarjetaPendiente> {
     setState(() => _enviando = true);
 
     try {
-      await ref.read(repositorioProvider).registrarEmbolsado(
-            id: widget.produccion.id,
-            cantidadEmbolsada: _embolsada,
-            causaId: _causaId,
-          );
+      final Anotado<Produccion> anotado =
+          await ref.read(produccionRepoProvider).embolsar(
+                id: widget.produccion.id,
+                sabor: widget.produccion.sabor,
+                cantidadEmbolsada: _embolsada,
+                causaId: _causaId,
+              );
+
+      await ref.read(pendientesColaProvider.notifier).releer();
+      refrescarDesde(ref);
 
       if (mounted) {
-        avisar(context, 'Las paletas ya están en el stock.');
-        refrescarTodo(ref);
+        avisar(
+          context,
+          anotado.encolado
+              ? 'Sin señal: el embolsado quedó guardado en el celular'
+              : 'Las paletas ya están en el stock.',
+        );
       }
     } on FalloApi catch (fallo) {
       if (mounted) {
@@ -259,10 +528,11 @@ class _TarjetaPendienteState extends ConsumerState<_TarjetaPendiente> {
                       ),
                       items: <DropdownMenuItem<String>>[
                         for (final CausaMerma causa in lista)
-                          DropdownMenuItem<String>(
-                            value: causa.id,
-                            child: Text(causa.nombre),
-                          ),
+                          if (causa.activa)
+                            DropdownMenuItem<String>(
+                              value: causa.id,
+                              child: Text(causa.nombre),
+                            ),
                       ],
                       onChanged: (String? valor) =>
                           setState(() => _causaId = valor),
@@ -326,18 +596,32 @@ class _FormularioProduccionState extends ConsumerState<_FormularioProduccion> {
     setState(() => _enviando = true);
 
     try {
-      final Produccion creada =
-          await ref.read(repositorioProvider).registrarProduccion(
+      final List<Sabor> catalogo =
+          ref.read(saboresProvider).value ?? const <Sabor>[];
+      final Sabor sabor = catalogo.firstWhere(
+        (Sabor cada) => cada.id == saborId,
+      );
+
+      final Anotado<Produccion> anotado =
+          await ref.read(produccionRepoProvider).registrar(
                 saborId: saborId,
+                sabor: sabor.nombre,
                 cantidadObtenida: cantidad,
                 fecha: hoyEnIso(),
                 clave: const Uuid().v4(),
               );
 
+      await ref.read(pendientesColaProvider.notifier).releer();
+      refrescarDesde(ref);
+
       if (mounted) {
         Navigator.of(context).pop();
-        avisar(context, 'Lote ${creada.lote ?? ''} registrado.');
-        refrescarTodo(ref);
+        avisar(
+          context,
+          anotado.encolado
+              ? 'Sin señal: la producción quedó guardada en el celular'
+              : 'Lote ${anotado.valor?.lote ?? ''} registrado.',
+        );
       }
     } on FalloApi catch (fallo) {
       if (mounted) {
