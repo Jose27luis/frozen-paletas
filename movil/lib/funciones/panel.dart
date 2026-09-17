@@ -182,54 +182,15 @@ class _Cabecera extends StatelessWidget {
   Widget build(BuildContext context) {
     final int? cobertura = indicadores?.stock.cobertura;
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[Paleta.marino, Paleta.helado],
-        ),
-      ),
-      padding: const EdgeInsets.all(22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text(
-            'Paletas disponibles',
-            style: TextStyle(color: Paleta.superficie, fontSize: 13),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            miles(panel.stockTotal),
-            style: const TextStyle(
-              color: Paleta.superficie,
-              fontSize: 46,
-              fontWeight: FontWeight.w700,
-              height: 1.05,
-              letterSpacing: -1,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: <Widget>[
-              const Icon(Icons.schedule, size: 16, color: Paleta.superficie),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  cobertura == null
-                      ? 'Sin salidas en el periodo para estimar duración'
-                      : 'Alcanzan para unos $cobertura días al ritmo actual',
-                  style: const TextStyle(
-                    color: Paleta.superficie,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+    return Cabecera(
+      rotulo: 'Paletas disponibles',
+      valor: miles(panel.stockTotal),
+      apunte: cobertura == null
+          ? 'Sin salidas en el periodo para estimar duración'
+          : 'Alcanzan para unos $cobertura días al ritmo actual',
+      derecha: <Widget>[
+        if (cobertura != null) Insignia('$cobertura días'),
+      ],
     );
   }
 }
@@ -406,26 +367,34 @@ class _Kpi extends StatelessWidget {
   final Color tono;
 
   @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Container(width: 26, height: 3, color: tono),
-              const SizedBox(height: 12),
-              Rotulo(rotulo),
-              const SizedBox(height: 4),
-              Cifra(valor, tamano: 26),
-              const SizedBox(height: 4),
-              Text(
-                pie,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Paleta.tenue, fontSize: 11),
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: tono.withValues(alpha: 0.09),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: tono.withValues(alpha: 0.22)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              rotulo,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: tono,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 6),
+            Cifra(valor, tamano: 26, tono: tono),
+            const SizedBox(height: 4),
+            Text(
+              pie,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Paleta.tenue, fontSize: 11),
+            ),
+          ],
         ),
       );
 }
