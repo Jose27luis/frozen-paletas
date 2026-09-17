@@ -174,6 +174,28 @@ class BarraStock extends StatelessWidget {
   }
 }
 
+EdgeInsets margenDeLista(BuildContext context, {double abajo = 24}) =>
+    EdgeInsets.fromLTRB(
+      16,
+      16,
+      16,
+      abajo + MediaQuery.viewPaddingOf(context).bottom,
+    );
+
+class Hoja extends StatelessWidget {
+  const Hoja({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: SafeArea(top: false, child: child),
+      );
+}
+
 Color tonoDelEstado(String estado) => switch (estado) {
       'DISPONIBLE' => Paleta.hoja,
       'REPONER' => Paleta.aguajeVivo,
