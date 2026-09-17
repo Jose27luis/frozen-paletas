@@ -2,27 +2,49 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../datos/fallo_api.dart';
-import '../datos/repositorio.dart';
+import '../datos/repos/sabores_repo.dart';
 import '../dominio/modelos.dart';
 import '../nucleo/formato.dart';
 import '../nucleo/proveedores.dart';
 import '../nucleo/tema.dart';
-import '../ui/menu_lateral.dart';
+import '../ui/detalle.dart';
+import '../ui/filtros.dart';
+import '../ui/pantalla.dart';
 import '../ui/piezas.dart';
 
-class PantallaSabores extends ConsumerWidget {
+class PantallaSabores extends ConsumerStatefulWidget {
   const PantallaSabores({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<Sabor>> catalogo = ref.watch(catalogoProvider);
+  ConsumerState<PantallaSabores> createState() => _PantallaSaboresState();
+}
+
+class _PantallaSaboresState extends ConsumerState<PantallaSabores> {
+  String? _categoria;
+
+  @override
+  Widget build(BuildContext context) {
     final Usuario? usuario = ref.watch(sesionProvider).value;
     final bool puede = usuario?.puede(Permisos.administrarSabores) ?? false;
 
-    return Scaffold(
-      drawer: const MenuLateral(),
-      appBar: AppBar(title: const Text('Sabores')),
-      floatingActionButton: puede
+    return Pantalla(
+      titulo: 'Sabores',
+      filtros: BarraDeFiltros(
+        children: <Widget>[
+          FilaDeChips<String?>(
+            opciones: <Opcion<String?>>[
+              const Opcion<String?>(valor: null, texto: 'Todas'),
+              for (final MapEntry<String, String> fila
+                  in Etiquetas.categoriaSabor.entries)
+                Opcion<String?>(valor: fila.key, texto: fila.value),
+            ],
+            elegida: _categoria,
+            alElegir: (String? categoria) =>
+                setState(() => _categoria = categoria),
+          ),
+        ],
+      ),
+      flotante: puede
           ? FloatingActionButton.extended(
               backgroundColor: Paleta.marino,
               foregroundColor: Paleta.superficie,
@@ -31,40 +53,40 @@ class PantallaSabores extends ConsumerWidget {
               label: const Text('Nuevo sabor'),
             )
           : null,
-      body: catalogo.when(
-        loading: () => const Cargando(),
-        error: (Object error, StackTrace rastro) => Fallo(
-          mensaje: error.toString(),
-          reintentar: () => ref.invalidate(catalogoProvider),
-        ),
-        data: (List<Sabor> sabores) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(catalogoProvider),
-          child: sabores.isEmpty
-              ? ListView(
-                  children: const <Widget>[
-                    Vacio('Todavía no hay sabores en el catálogo.'),
-                  ],
-                )
-              : ListView.separated(
-                  padding: margenDeLista(context, abajo: 96),
-                  itemCount: sabores.length,
-                  separatorBuilder: (BuildContext contexto, int indice) =>
-                      const SizedBox(height: 10),
-                  itemBuilder: (BuildContext contexto, int indice) => _Ficha(
-                    sabor: sabores[indice],
-                    puede: puede,
-                    alEditar: () => _editar(context, ref, sabores[indice]),
-                    alCambiarEstado: () =>
-                        _cambiarEstado(context, ref, sabores[indice]),
-                  ),
-                ),
-        ),
+      cuerpo: Cargado<List<Sabor>>(
+        valor: ref.watch(catalogoProvider),
+        alRefrescar: () => ref.invalidate(catalogoProvider),
+        construir: (List<Sabor> todos) {
+          final List<Sabor> sabores = _categoria == null
+              ? todos
+              : todos
+                  .where((Sabor sabor) => sabor.categoria == _categoria)
+                  .toList(growable: false);
+
+          if (sabores.isEmpty) {
+            return const ListaVacia('No hay sabores en esa categoría.');
+          }
+
+          return ListView.separated(
+            padding: margenDeLista(context, abajo: 96),
+            itemCount: sabores.length,
+            separatorBuilder: (BuildContext contexto, int indice) =>
+                const SizedBox(height: 10),
+            itemBuilder: (BuildContext contexto, int indice) => _Ficha(
+              sabor: sabores[indice],
+              puede: puede,
+              alEditar: () => _editar(context, ref, sabores[indice]),
+              alCambiarEstado: () =>
+                  _cambiarEstado(context, ref, sabores[indice]),
+            ),
+          );
+        },
       ),
     );
   }
 }
 
-class _Ficha extends StatelessWidget {
+class _Ficha extends ConsumerWidget {
   const _Ficha({
     required this.sabor,
     required this.puede,
@@ -78,13 +100,14 @@ class _Ficha extends StatelessWidget {
   final VoidCallback alCambiarEstado;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bool activo = sabor.estado == 'ACTIVO';
+    final IndicadorSabor? medida = _medidaDe(ref);
 
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: puede ? alEditar : null,
+        onTap: () => _abrir(context, ref, medida),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -171,6 +194,50 @@ class _Ficha extends StatelessWidget {
                   ),
                 ],
               ),
+              if (medida != null) ...<Widget>[
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Paleta.hundido,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: _Medida(
+                          rotulo: 'Stock',
+                          valor: miles(medida.stock),
+                          tono: tonoDelEstado(medida.estado),
+                        ),
+                      ),
+                      Expanded(
+                        child: _Medida(
+                          rotulo: 'Produjo',
+                          valor: miles(medida.producido),
+                        ),
+                      ),
+                      Expanded(
+                        child: _Medida(
+                          rotulo: 'Salió',
+                          valor: miles(medida.salido),
+                        ),
+                      ),
+                      Expanded(
+                        child: _Medida(
+                          rotulo: 'Dura',
+                          valor: medida.cobertura == null
+                              ? '—'
+                              : '${medida.cobertura} d',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (puede) ...<Widget>[
                 const SizedBox(height: 8),
                 Row(
@@ -203,6 +270,117 @@ class _Ficha extends StatelessWidget {
       ),
     );
   }
+
+  IndicadorSabor? _medidaDe(WidgetRef ref) {
+    final Indicadores? medidas = ref.watch(indicadoresProvider).value;
+
+    if (medidas == null) {
+      return null;
+    }
+
+    for (final IndicadorSabor cada in medidas.sabores) {
+      if (cada.saborId == sabor.id) {
+        return cada;
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _abrir(
+    BuildContext context,
+    WidgetRef ref,
+    IndicadorSabor? medida,
+  ) =>
+      abrirDetalle(
+        context,
+        titulo: sabor.nombre,
+        subtitulo:
+            '${sabor.abreviatura} · ${Etiquetas.categoriaSabor[sabor.categoria] ?? sabor.categoria}',
+        children: <Widget>[
+          FilaDetalle(
+            rotulo: 'Estado',
+            valor: Etiquetas.estadoSabor[sabor.estado] ?? sabor.estado,
+            tono: sabor.estado == 'ACTIVO' ? Paleta.hoja : Paleta.tenue,
+          ),
+          FilaDetalle(
+            rotulo: 'Precio por unidad',
+            valor: sabor.precioUnidad == null
+                ? 'Sin precio'
+                : soles(sabor.precioUnidad!),
+          ),
+          FilaDetalle(
+            rotulo: 'Precio por mayor',
+            valor: sabor.precioMayor == null
+                ? 'Sin precio'
+                : soles(sabor.precioMayor!),
+          ),
+          FilaDetalle(
+            rotulo: 'Stock mínimo',
+            valor: miles(sabor.stockMinimo),
+          ),
+          if (medida != null) ...<Widget>[
+            const Seccion('EN EL PERIODO'),
+            FilaDetalle(rotulo: 'Stock ahora', valor: miles(medida.stock)),
+            FilaDetalle(rotulo: 'Produjo', valor: miles(medida.producido)),
+            FilaDetalle(rotulo: 'Salió', valor: miles(medida.salido)),
+            FilaDetalle(
+              rotulo: 'Merma',
+              valor: miles(medida.merma),
+              tono: medida.merma > 0 ? Paleta.granate : Paleta.tinta,
+            ),
+            FilaDetalle(
+              rotulo: 'Alcanza para',
+              valor: medida.cobertura == null
+                  ? 'Sin salidas para estimar'
+                  : '${medida.cobertura} días',
+            ),
+          ],
+          if (puede) ...<Widget>[
+            const SizedBox(height: 18),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop();
+                alEditar();
+              },
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: const Text('Editar este sabor'),
+            ),
+          ],
+        ],
+      );
+}
+
+class _Medida extends StatelessWidget {
+  const _Medida({
+    required this.rotulo,
+    required this.valor,
+    this.tono = Paleta.tinta,
+  });
+
+  final String rotulo;
+  final String valor;
+  final Color tono;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            rotulo,
+            style: const TextStyle(fontSize: 11, color: Paleta.tenue),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            valor,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: tono,
+            ),
+          ),
+        ],
+      );
 }
 
 class _Precio extends StatelessWidget {
@@ -266,12 +444,12 @@ Future<void> _cambiarEstado(
   }
 
   try {
-    final Repositorio repositorio = ref.read(repositorioProvider);
+    final SaboresRepo repositorio = ref.read(saboresRepoProvider);
 
     if (activo) {
-      await repositorio.desactivarSabor(sabor.id);
+      await repositorio.desactivar(sabor.id);
     } else {
-      await repositorio.activarSabor(sabor.id);
+      await repositorio.activar(sabor.id);
     }
 
     ref
@@ -371,12 +549,12 @@ class _FormularioState extends ConsumerState<_Formulario> {
 
     try {
       final Sabor? sabor = widget.sabor;
-      final Repositorio repositorio = ref.read(repositorioProvider);
+      final SaboresRepo repositorio = ref.read(saboresRepoProvider);
 
       if (sabor == null) {
-        await repositorio.crearSabor(datos);
+        await repositorio.crear(datos);
       } else {
-        await repositorio.actualizarSabor(sabor.id, datos);
+        await repositorio.actualizar(sabor.id, datos);
       }
 
       ref
