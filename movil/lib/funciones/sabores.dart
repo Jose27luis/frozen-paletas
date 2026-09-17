@@ -45,12 +45,10 @@ class _PantallaSaboresState extends ConsumerState<PantallaSabores> {
         ],
       ),
       flotante: puede
-          ? FloatingActionButton.extended(
-              backgroundColor: Paleta.marino,
-              foregroundColor: Paleta.superficie,
-              onPressed: () => _editar(context, ref, null),
-              icon: const Icon(Icons.add),
-              label: const Text('Nuevo sabor'),
+          ? Boton(
+              icono: Icons.add,
+              texto: 'Nuevo sabor',
+              alTocar: () => _editar(context, ref, null),
             )
           : null,
       cuerpo: Cargado<List<Sabor>>(
@@ -499,6 +497,7 @@ class _FormularioState extends ConsumerState<_Formulario> {
   late final TextEditingController _mayor;
 
   late String _categoria;
+  late String _estado;
   bool _enviando = false;
 
   @override
@@ -513,6 +512,7 @@ class _FormularioState extends ConsumerState<_Formulario> {
     _unidad = TextEditingController(text: sabor?.precioUnidad ?? '');
     _mayor = TextEditingController(text: sabor?.precioMayor ?? '');
     _categoria = sabor?.categoria ?? 'CON_RELLENO';
+    _estado = sabor?.estado ?? 'ACTIVO';
   }
 
   @override
@@ -542,6 +542,7 @@ class _FormularioState extends ConsumerState<_Formulario> {
       'nombre': _nombre.text.trim(),
       'abreviatura': _abreviatura.text.trim().toUpperCase(),
       'categoria': _categoria,
+      'estado': _estado,
       'stockMinimo': int.tryParse(_minimo.text.trim()) ?? 80,
       'precioUnidad': ?_decimal(_unidad),
       'precioMayor': ?_decimal(_mayor),
@@ -669,6 +670,25 @@ class _FormularioState extends ConsumerState<_Formulario> {
               decoration: const InputDecoration(
                 labelText: 'Stock mínimo antes de avisar',
               ),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _estado,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Estado',
+                helperText: 'Retirado deja de contar para las alertas de stock.',
+              ),
+              items: <DropdownMenuItem<String>>[
+                for (final MapEntry<String, String> fila
+                    in Etiquetas.estadoSabor.entries)
+                  DropdownMenuItem<String>(
+                    value: fila.key,
+                    child: Text(fila.value),
+                  ),
+              ],
+              onChanged: (String? elegido) =>
+                  setState(() => _estado = elegido ?? _estado),
             ),
             const SizedBox(height: 20),
             FilledButton(
