@@ -37,7 +37,7 @@ class PantallaInventario extends ConsumerWidget {
         data: (Inventario datos) => RefreshIndicator(
           onRefresh: () async => ref.invalidate(inventarioProvider),
           child: ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: margenDeLista(context),
             itemCount: datos.sabores.length + 1,
             separatorBuilder: (BuildContext contexto, int indice) =>
                 const SizedBox(height: 10),
@@ -72,14 +72,11 @@ class PantallaInventario extends ConsumerWidget {
     await showModalBottomSheet<void>(
       context: contexto,
       isScrollControlled: true,
-      builder: (BuildContext hoja) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(hoja).viewInsets.bottom + 20,
+      builder: (BuildContext hoja) => Hoja(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: _BuscadorDeLote(codigo: codigo, ref: ref),
         ),
-        child: _BuscadorDeLote(codigo: codigo, ref: ref),
       ),
     );
 
