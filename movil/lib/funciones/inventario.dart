@@ -215,36 +215,15 @@ class _Resumen extends StatelessWidget {
         .where((StockSabor sabor) => sabor.estado != 'DISPONIBLE')
         .length;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Rotulo('Paletas en almacén'),
-                  const SizedBox(height: 4),
-                  Cifra(miles(inventario.total), tamano: 32),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: <Widget>[
-                Etiqueta(
-                  '$visibles de ${inventario.sabores.length} sabores',
-                  tono: Paleta.marino,
-                ),
-                const SizedBox(height: 8),
-                if (reponer > 0)
-                  Etiqueta('$reponer por reponer', tono: Paleta.aguajeVivo),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return Cabecera(
+      rotulo: 'Paletas en almacén',
+      valor: miles(inventario.total),
+      apunte: reponer == 0
+          ? 'Todos los sabores por encima del mínimo'
+          : '$reponer ${reponer == 1 ? 'sabor pide' : 'sabores piden'} reposición',
+      derecha: <Widget>[
+        Insignia('$visibles de ${inventario.sabores.length} sabores'),
+      ],
     );
   }
 }
