@@ -49,7 +49,7 @@ class PantallaLotes extends ConsumerWidget {
                         ],
                       )
                     : ListView.separated(
-                        padding: const EdgeInsets.all(16),
+                        padding: margenDeLista(context),
                         itemCount: filas.length,
                         separatorBuilder:
                             (BuildContext contexto, int indice) =>
